@@ -87,6 +87,8 @@ h2{ margin:0; font-size:16px; }
   display:inline-flex;
   align-items:center;
   gap:8px;
+  position:relative;
+  z-index:2;
 }
 .btn:hover{ background:#eef2f7; }
 
@@ -104,6 +106,7 @@ h2{ margin:0; font-size:16px; }
   border-radius:14px;
   padding:12px;
   background:rgba(15,23,42,.02);
+  min-height: 220px;
 }
 .box-title{
   font-weight:700;
@@ -135,44 +138,103 @@ h2{ margin:0; font-size:16px; }
 .kpi .n{ font-weight:800; font-size:18px; }
 .kpi .l{ color:var(--muted); font-size:12px; margin-top:2px; }
 
-/* Se till att canvas faktiskt får plats och syns */
 .canvas{
-  width: 100% !important;
-  height: auto !important;
+  width:100% !important;
+  height:auto !important;
   min-height: 260px;
+  display:block;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
 }
 
-/* I din layout: säkra att boxar inte kollapsar */
-.box{
-  min-height: 220px;
+.svg{
+  width:100%;
+  height:auto;
+  display:block;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#fff;
 }
 
-/* Fullscreen-läge: ge modulen “presentation-yta” */
-:fullscreen, :-webkit-full-screen{
-  background: #f5f7f7;
+.toolbar{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  margin:8px 0 12px;
+}
+.pill{
+  border:1px solid var(--line);
+  background:#f8fafc;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:13px;
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+select{
+  border:1px solid var(--line);
+  border-radius:10px;
+  padding:6px 8px;
+  background:#fff;
 }
 
-.card:fullscreen, .card:-webkit-full-screen{
-  width: 100vw;
-  height: 100vh;
+.frame{
+  border:1px solid var(--line);
+  border-radius:14px;
+  overflow:hidden;
+  background:#fff;
+}
+.frame iframe{
+  width:100%;
+  height:min(75vh, 820px);
+  border:0;
+  display:block;
+}
+
+.sliders label{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:10px;
+  align-items:center;
+  color:var(--muted);
+  font-size:13px;
+  margin:8px 0;
+}
+.sliders input[type="range"]{
+  grid-column:1 / -1;
+  width:100%;
+}
+
+.footer{
+  margin-top:18px;
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  padding:10px 2px;
+  font-size:12.5px;
+  border-top:1px solid var(--line);
+}
+
+/* ===== Expandera-läge (garanterad “helskärm”) ===== */
+.card.expanded{
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
   margin: 0;
   border-radius: 0;
   overflow: auto;
   padding: 18px;
+  background: #f5f7f7;
 }
-
-/* Gör att innehåll får mer höjd i fullscreen */
-.card:fullscreen .canvas,
-.card:-webkit-full-screen .canvas{
-  min-height: 420px;
+.card.expanded .box{
+  background:#fff;
 }
-
-.frame iframe{
-  height: min(85vh, 1000px);
+.card.expanded .canvas{
+  min-height: 520px;
 }
-
-/* Liten fix: knappar ska alltid vara klickbara */
-.btn{
-  position: relative;
-  z-index: 2;
+.card.expanded .frame iframe{
+  height: 90vh;
 }
