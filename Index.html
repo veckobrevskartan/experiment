@@ -1,0 +1,87 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8">
+  <title>Svensk OSINT</title>
+  <link rel="stylesheet" href="style.css">
+  <!-- Leaflet CSS (lokal fil) -->
+  <link rel="stylesheet" href="leaflet.css">
+</head>
+<body>
+  <header>
+    <img src="svensk osint logga .png" alt="Svensk OSINT logga" class="logo">
+    <h1>Svensk OSINT</h1>
+  </header>
+
+  <!-- Sektion: Underrättelsecykeln -->
+  <section id="cykeln">
+    <h2>Underrättelsecykeln</h2>
+    <p>Underrättelsecykeln beskriver stegen Planering (Inriktning), Datainsamling (Inhämtning), Bearbetning, Analys, Produktion/Spridning och Utvärdering:contentReference[oaicite:6]{index=6}:contentReference[oaicite:7]{index=7}. Här visas en grafisk illustration av cykeln (expanderbar):</p>
+    <div class="image-container">
+      <img src="intelligence_cycle.png" alt="Intelligence cycle illustration">
+    </div>
+    <p>Vart och ett av dessa steg kan expandera till helskärm med detaljer.</p>
+  </section>
+
+  <!-- Sektion: OIAT-kriterier -->
+  <section id="oiat">
+    <h2>OIAT-kriterier</h2>
+    <p>OIAT-kriterierna används för att kvalitetssäkra öppna källor och analys. [Här beskrivs varje kriterium – t.ex. relevans, aktualitet, trovärdighet – på svenska.] Varje kriterium kan expandera till mer information.</p>
+  </section>
+
+  <!-- Sektion: Indikatorer -->
+  <section id="indikatorer">
+    <h2>Indikatorer</h2>
+    <p>Indikatorer är tidiga varningssignaler som pekar på kommande skeenden:contentReference[oaicite:8]{index=8}. Exempelvis kan ovanliga inköp eller ändrat kommunikationsmönster vara indikatorer. I denna presentation kan man klicka för att visa fler exempel på indikatorer.</p>
+  </section>
+
+  <!-- Sektion: Kända/okända -->
+  <section id="known">
+    <h2>Kända och okända</h2>
+    <p>Analysen tar också höjd för Rumsfelds modell med <em>”kända kända”</em>, <em>”kända okända”</em> och <em>”okända okända”</em>:contentReference[oaicite:9]{index=9}. Det innebär att vi definierar vad vi säkert vet, vad vi vet att vi inte vet, och vad vi ännu inte kan förutse.</p>
+  </section>
+
+  <!-- Sektion: Produktformat -->
+  <section id="produktformat">
+    <h2>Produktformat</h2>
+    <p>Underrättelseprodukter kan utformas som rapporter, lägesbilder, dashboards eller bulletiner. Här finns exempelgrafik för varje formatstyp – klicka på ett format för helskärmsgrafik.</p>
+  </section>
+
+  <!-- Sektion: Diagram -->
+  <section id="diagram">
+    <h2>Interaktiva diagram</h2>
+    <div class="charts">
+      <!-- Här placeras diagram som skapas av Chart.js -->
+      <canvas id="barChart"></canvas>
+      <canvas id="timelineChart"></canvas>
+      <canvas id="heatmapChart"></canvas>
+    </div>
+    <p>Diagrammen visar händelser per kategori, tidslinje per månad och kategori vs månad (heatmap) från data i `data.js`.</p>
+  </section>
+
+  <!-- Sektion: Karta -->
+  <section id="karta">
+    <h2>Händelsekarta</h2>
+    <div id="map" style="height: 500px;"></div>
+    <div class="filters">
+      <label><input type="checkbox" value="TERROR" checked> Terror</label>
+      <!-- Fler filter för varje kategori -->
+    </div>
+    <p>Klicka på markörer för detaljer. Kartan är filterbar per kategori och kan visas helskärm.</p>
+  </section>
+
+  <!-- Under sektionerna: återkopplingsslöfe, etc. -->
+
+  <footer>
+    <p>Datakälla: Svensk OSINT. Design: GitHub Pages (offline-läge).</p>
+  </footer>
+
+  <!-- Skript (alla lokala): -->
+  <script src="data.js"></script>
+  <script src="charts.js"></script>
+  <!-- Leaflet JS (lokal fil) -->
+  <script src="leaflet.js"></script>
+  <script src="map.js"></script>
+</body>
+</html>
