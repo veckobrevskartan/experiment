@@ -2,7 +2,7 @@
 // Fältnamn som används i graferna:
 // category, date (YYYY-MM-DD), country, place, lat, lng, title, url
 
-const events = [
+window.events = [
   {country:'SE',cat:'HYBRID',title:'Misstänkta konton söker drönarpiloter i forum',place:'Sverige (online)',date:'2025-10-05',lat:59.334,lng:18.067,summary:'Nya, misstänkta Facebook-konton erbjuder betalning för flygningar nära skyddsobjekt, och de verkar veta vilka de ska rikta in sig på. Administratörer tar bort profiler varje vecka.',url:'https://www.sverigesradio.se/artikel/dronarpiloter-soks-upp-pa-facebook-for-att-spana-pa-skyddsobjekt',source:'Sveriges Radio (2025)'},
   {country:'SE',cat:'NUCLEAR',title:'Ryskt uranfartyg med motorhaveri utanför Blekinge',place:'31 km SO om Hasslö, Blekinge (SE)',date:'2025-09-29',lat:56.118,lng:15.585,summary:'Panamaflaggade Mikhail Dudin ligger för ankar efter motorhaveri; tidigare urantransporter till Seversk. Kustbevakning/Marinen informerade.',url:'https://www.sydostran.se/nyheter/ryskt-fartyg-med-motorhaveri-utanfor-blekinge-anvands-for-att-frakta-uran/',source:'Hultgren, 2025 / Sydöstran'},
   {country:'SE',cat:'DRONE',title:'Drönarlarm vid Ronneby flygplats',place:'Ronneby Airport (SE)',date:'2025-09-29',lat:56.266,lng:15.265,summary:'Misstänkt drönare. Plan vände mot Kalmar innan landning i Ronneby. Civil/militär flygplats (F 17).',url:'https://www.expressen.se/nyheter/expressen-direkt/?post=1ddb8d7c-0474-4d53-af33-f0cc6c69a7ed',source:'Expressen Direkt (2025)'},
@@ -2228,27 +2228,7 @@ const events = [
 
 {country:'AR',cat:'POLICY',title:'Milei reformerar Argentinas underrättelsesystem via nödförordnande',place:'Buenos Aires (AR)',date:'2026-01-02',lat:-34.6037,lng:-58.3816,summary:'President Javier Milei ger underrättelsetjänsten SIDE utökade befogenheter genom ett nödförordnande, vilket väcker stark politisk kritik.',url:'https://www.linkedin.com/feed/update/urn:li:activity:7413574681221328896'},
 
-{country:'US',cat:'POLICY',title:'ICE outsourcar omfattande skip tracing till Constellis och OMNIPLEX',place:'USA – ICE / Enforcement and Removal Operations (US)',date:'2026-01-03',lat:38.9072,lng:-77.0369,summary:'ICE har anlitat Constellis/OMNIPLEX för omfattande skip tracing med upp till 1,5 miljoner individer som målpopulation.',url:'https://www.linkedin.com/feed/update/urn:li:activity:7413579447490183169'},
+{country:'US',cat:'POLICY',title:'ICE outsourcar omfattande skip tracing till Constellis och OMNIPLEX',place:'USA – ICE / Enforcement and Removal Operations (US)',date:'2026-01-03',lat:38.9072,lng:-77.0369,summary:'ICE har anlitat Constellis/OMNIPLEX för omfattande skip tracing med upp till 1,5 miljoner individer som målpopulation.',url:'https://www.linkedin.com/feed/update/urn:li:activity:7413579447490183169'}
   }
   ];
-  {
-    category: "INTEL",
-    date: "2025-11-02",
-    country: "NO",
-    place: "Oslo",
-    lat: 59.9139,
-    lng: 10.7522,
-    title: "Underrättelserelaterad händelse",
-    url: ""
-  },
-  {
-    category: "TERROR",
-    date: "2025-12-12",
-    country: "DE",
-    place: "Berlin",
-    lat: 52.52,
-    lng: 13.405,
-    title: "Terrorrelaterad händelse",
-    url: ""
-  }
-];
+
