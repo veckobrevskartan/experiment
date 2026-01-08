@@ -1,0 +1,8 @@
+/* style.css (utdrag) */
+body { margin:0; font-family:sans-serif; background: #f4f7f6; }
+header { display:flex; align-items:center; padding:10px; background:#ffffff; }
+header .logo { height:50px; margin-right:15px; }
+section { padding: 20px; background: #fff; margin:20px auto; max-width: 800px; border-radius:8px; box-shadow:0 2px 5px rgba(0,0,0,0.1); }
+.image-container { text-align:center; margin:10px 0; }
+.filters { margin:10px 0; }
+/* Responsiv design med grid/flex etc. (fler stilar i filen) */
