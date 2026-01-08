@@ -27,20 +27,21 @@
           <p class="muted">Snabb bild av dataset och upplägg.</p>
         </div>
         <div class="actions">
-       <button class="btn" type="button" data-fullscreen="#overview">Helskärm</button>
+          <button class="btn" type="button" data-expand="#overview">Expandera</button>
         </div>
       </div>
 
       <div class="grid2">
         <div class="box">
+          <div class="box-title">Nyckeltal</div>
           <div class="kpis" id="kpis"></div>
-          <div class="note">Tips: klicka “Helskärm” per modul under presentation.</div>
+          <div class="note" id="dataRange"></div>
         </div>
 
         <div class="box">
           <div class="box-title">Volym över tid (snabb)</div>
           <canvas id="spark" class="canvas" height="260"></canvas>
-          <div class="note" id="dataRange"></div>
+          <div class="note">Tips: expandera en modul och presentera den separat.</div>
         </div>
       </div>
     </section>
@@ -53,24 +54,26 @@
           <p class="muted">Inriktning → Planering → Inhämtning → Bearbetning → Analys → Delgivning → Feedback</p>
         </div>
         <div class="actions">
-          <button class="btn" data-fullscreen="#cycle">Helskärm</button>
+          <button class="btn" type="button" data-expand="#cycle">Expandera</button>
         </div>
       </div>
 
       <div class="grid2">
         <div class="box">
+          <div class="box-title">Steg (kort)</div>
           <ul class="list">
             <li><b>Inriktning</b>: definiera frågor, mål och prioriteringar.</li>
             <li><b>Planering</b>: metod, källor, ansvar, tidslinje.</li>
-            <li><b>Inhämtning</b>: systematiskt samla data (källdiversitet).</li>
+            <li><b>Inhämtning</b>: systematiskt samla data.</li>
             <li><b>Bearbetning</b>: strukturera, normalisera, validera.</li>
-            <li><b>Analys</b>: hypotesdrivet, indikatorer, alternativ.</li>
+            <li><b>Analys</b>: hypotesdrivet, indikatorer, alternativa förklaringar.</li>
             <li><b>Delgivning</b>: rätt format till rätt mottagare.</li>
-            <li><b>Feedback</b>: förbättra inriktning och indikatorlistor.</li>
+            <li><b>Feedback</b>: förbättra inriktning och indikatorlista.</li>
           </ul>
         </div>
 
         <div class="box">
+          <div class="box-title">Illustration</div>
           <svg class="svg" viewBox="0 0 900 420" role="img" aria-label="Underrättelsecykeln">
             <rect x="0" y="0" width="900" height="420" rx="18" fill="rgba(15,23,42,0.04)"/>
             <text x="40" y="70" font-size="22" font-weight="700" fill="#0f172a">Underrättelsecykeln</text>
@@ -83,7 +86,6 @@
               <text x="0" y="16" text-anchor="middle" font-size="12" fill="#475569">spårbart • iterativt</text>
             </g>
 
-            <!-- noder -->
             <g font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
               <g>
                 <circle cx="450" cy="105" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
@@ -116,7 +118,6 @@
                 <text x="290" y="190" text-anchor="middle" font-size="11" fill="#475569">lärande</text>
               </g>
 
-              <!-- pilar -->
               <path d="M450,143 C520,150 570,160 610,175" fill="none" stroke="#94a3b8" stroke-width="3"/>
               <path d="M648,200 C690,230 690,260 648,290" fill="none" stroke="#94a3b8" stroke-width="3"/>
               <path d="M610,343 C575,360 530,368 488,370" fill="none" stroke="#94a3b8" stroke-width="3"/>
@@ -124,7 +125,6 @@
               <path d="M290,267 C270,240 270,210 290,195" fill="none" stroke="#94a3b8" stroke-width="3"/>
               <path d="M320,165 C350,135 390,120 430,118" fill="none" stroke="#94a3b8" stroke-width="3"/>
 
-              <!-- feedback-pil markerad -->
               <path d="M290,137 C320,110 380,96 450,96" fill="none" stroke="#2563eb" stroke-width="3" stroke-dasharray="7 6"/>
               <text x="80" y="120" font-size="12" fill="#2563eb">feedback → ny inriktning</text>
             </g>
@@ -141,23 +141,24 @@
           <p class="muted">Objektivitet • Integritet • Aktualitet • Täckning</p>
         </div>
         <div class="actions">
-          <button class="btn" data-fullscreen="#oiat">Helskärm</button>
+          <button class="btn" type="button" data-expand="#oiat">Expandera</button>
         </div>
       </div>
 
       <div class="grid2">
         <div class="box">
+          <div class="box-title">Definition (kort)</div>
           <ul class="list">
-            <li><b>Objektivitet</b>: faktabaserat, skilj observation från tolkning.</li>
+            <li><b>Objektivitet</b>: skilj observation från tolkning.</li>
             <li><b>Integritet</b>: spårbarhet, källhygien, undvik cherry-picking.</li>
-            <li><b>Aktualitet</b>: tidsstämplar, uppdateringsfrekvens, “freshness”.</li>
-            <li><b>Täckning</b>: källdiversitet, geografisk/tematisk täckning.</li>
+            <li><b>Aktualitet</b>: tidsstämplar, uppdateringsfrekvens.</li>
+            <li><b>Täckning</b>: källdiversitet och perspektivbredd.</li>
           </ul>
-          <div class="note">Använd OIAT som poängkort per källa, underlag eller bedömning.</div>
+          <div class="note">Poängsätt ett underlag, en källa eller en bedömning.</div>
         </div>
 
         <div class="box">
-          <div class="box-title">OIAT-poängkort (interaktivt)</div>
+          <div class="box-title">OIAT-poäng (interaktivt)</div>
           <div class="sliders">
             <label>Objektivitet <span id="vO">4</span><input id="sO" type="range" min="0" max="5" value="4"></label>
             <label>Integritet <span id="vI">4</span><input id="sI" type="range" min="0" max="5" value="4"></label>
@@ -177,21 +178,23 @@
           <p class="muted">Known knowns • Known unknowns • Unknown knowns • Unknown unknowns</p>
         </div>
         <div class="actions">
-          <button class="btn" data-fullscreen="#known">Helskärm</button>
+          <button class="btn" type="button" data-expand="#known">Expandera</button>
         </div>
       </div>
 
       <div class="grid2">
         <div class="box">
+          <div class="box-title">Tolkning</div>
           <ul class="list">
-            <li><b>Known knowns</b>: det vi vet och kan mäta – rutiner, KPI:er, trender.</li>
-            <li><b>Known unknowns</b>: luckor vi känner till – riktad inhämtning och triggers.</li>
-            <li><b>Unknown knowns</b>: dold kunskap internt – strukturera och få upp till ytan.</li>
-            <li><b>Unknown unknowns</b>: överraskningar – scenarier, resiliens, bred bevakning.</li>
+            <li><b>Known knowns</b>: det vi kan mäta och följa upp.</li>
+            <li><b>Known unknowns</b>: luckor vi känner till – riktad inhämtning.</li>
+            <li><b>Unknown knowns</b>: dold intern kunskap – strukturera och lyft fram.</li>
+            <li><b>Unknown unknowns</b>: överraskningar – scenarier och resiliens.</li>
           </ul>
         </div>
 
         <div class="box">
+          <div class="box-title">Matris</div>
           <svg class="svg" viewBox="0 0 900 420" role="img" aria-label="Kända och okända matris">
             <rect x="0" y="0" width="900" height="420" rx="18" fill="rgba(15,23,42,0.04)"/>
             <text x="40" y="70" font-size="22" font-weight="700" fill="#0f172a">Kunskapsläge</text>
@@ -230,7 +233,7 @@
           <p class="muted">Byggda direkt på datasetet (utan externa bibliotek).</p>
         </div>
         <div class="actions">
-          <button class="btn" data-fullscreen="#charts">Helskärm</button>
+          <button class="btn" type="button" data-expand="#charts">Expandera</button>
         </div>
       </div>
 
@@ -268,7 +271,7 @@
         </div>
       </div>
 
-      <div class="note">Hover på diagram för tooltip (enkel). Filtrera kategori för att ändra alla grafer.</div>
+      <div class="note">Om du har få datapunkter kan vissa grafer bli glest fyllda.</div>
     </section>
 
     <!-- KARTA (IFRAME) -->
@@ -279,7 +282,7 @@
           <p class="muted">Inbäddad interaktiv karta.</p>
         </div>
         <div class="actions">
-          <button class="btn" data-fullscreen="#map">Helskärm</button>
+          <button class="btn" type="button" data-expand="#map">Expandera</button>
           <a class="btn" href="https://veckobrevskartan.github.io/veckobrevskartan/" target="_blank" rel="noopener">Öppna i ny flik</a>
         </div>
       </div>
@@ -296,7 +299,7 @@
 
     <footer class="footer">
       <span>© Svensk OSINT</span>
-      <span class="muted">GitHub Pages • modulär presentation</span>
+      <span class="muted">VERSION: 2026-01-08 v2</span>
     </footer>
 
   </main>
