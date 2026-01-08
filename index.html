@@ -1,87 +1,307 @@
-<!-- index.html -->
 <!DOCTYPE html>
 <html lang="sv">
 <head>
-  <meta charset="UTF-8">
-  <title>Svensk OSINT</title>
-  <link rel="stylesheet" href="style.css">
-  <!-- Leaflet CSS (lokal fil) -->
-  <link rel="stylesheet" href="leaflet.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Svensk OSINT – Presentation</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <header>
-    <img src="svensk osint logga .png" alt="Svensk OSINT logga" class="logo">
-    <h1>Svensk OSINT</h1>
+  <header class="topbar">
+    <div class="brand">
+      <img src="svensk-osint-logga.png" alt="Svensk OSINT logga" class="logo" />
+      <div>
+        <h1>Svensk OSINT</h1>
+        <div class="subtitle">Hotanalys • Underrättelsecykeln • Indikatorer • Visualisering</div>
+      </div>
+    </div>
   </header>
 
-  <!-- Sektion: Underrättelsecykeln -->
-  <section id="cykeln">
-    <h2>Underrättelsecykeln</h2>
-    <p>Underrättelsecykeln beskriver stegen Planering (Inriktning), Datainsamling (Inhämtning), Bearbetning, Analys, Produktion/Spridning och Utvärdering:contentReference[oaicite:6]{index=6}:contentReference[oaicite:7]{index=7}. Här visas en grafisk illustration av cykeln (expanderbar):</p>
-    <div class="image-container">
-      <img src="intelligence_cycle.png" alt="Intelligence cycle illustration">
-    </div>
-    <p>Vart och ett av dessa steg kan expandera till helskärm med detaljer.</p>
-  </section>
+  <main class="wrap">
 
-  <!-- Sektion: OIAT-kriterier -->
-  <section id="oiat">
-    <h2>OIAT-kriterier</h2>
-    <p>OIAT-kriterierna används för att kvalitetssäkra öppna källor och analys. [Här beskrivs varje kriterium – t.ex. relevans, aktualitet, trovärdighet – på svenska.] Varje kriterium kan expandera till mer information.</p>
-  </section>
+    <!-- ÖVERSIKT -->
+    <section class="card" id="overview">
+      <div class="card-head">
+        <div>
+          <h2>Översikt</h2>
+          <p class="muted">Snabb bild av dataset och upplägg.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#overview">Helskärm</button>
+        </div>
+      </div>
 
-  <!-- Sektion: Indikatorer -->
-  <section id="indikatorer">
-    <h2>Indikatorer</h2>
-    <p>Indikatorer är tidiga varningssignaler som pekar på kommande skeenden:contentReference[oaicite:8]{index=8}. Exempelvis kan ovanliga inköp eller ändrat kommunikationsmönster vara indikatorer. I denna presentation kan man klicka för att visa fler exempel på indikatorer.</p>
-  </section>
+      <div class="grid2">
+        <div class="box">
+          <div class="kpis" id="kpis"></div>
+          <div class="note">Tips: klicka “Helskärm” per modul under presentation.</div>
+        </div>
 
-  <!-- Sektion: Kända/okända -->
-  <section id="known">
-    <h2>Kända och okända</h2>
-    <p>Analysen tar också höjd för Rumsfelds modell med <em>”kända kända”</em>, <em>”kända okända”</em> och <em>”okända okända”</em>:contentReference[oaicite:9]{index=9}. Det innebär att vi definierar vad vi säkert vet, vad vi vet att vi inte vet, och vad vi ännu inte kan förutse.</p>
-  </section>
+        <div class="box">
+          <div class="box-title">Volym över tid (snabb)</div>
+          <canvas id="spark" class="canvas" height="260"></canvas>
+          <div class="note" id="dataRange"></div>
+        </div>
+      </div>
+    </section>
 
-  <!-- Sektion: Produktformat -->
-  <section id="produktformat">
-    <h2>Produktformat</h2>
-    <p>Underrättelseprodukter kan utformas som rapporter, lägesbilder, dashboards eller bulletiner. Här finns exempelgrafik för varje formatstyp – klicka på ett format för helskärmsgrafik.</p>
-  </section>
+    <!-- UNDERRÄTTELSECYKELN -->
+    <section class="card" id="cycle">
+      <div class="card-head">
+        <div>
+          <h2>Underrättelsecykeln</h2>
+          <p class="muted">Inriktning → Planering → Inhämtning → Bearbetning → Analys → Delgivning → Feedback</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#cycle">Helskärm</button>
+        </div>
+      </div>
 
-  <!-- Sektion: Diagram -->
-  <section id="diagram">
-    <h2>Interaktiva diagram</h2>
-    <div class="charts">
-      <!-- Här placeras diagram som skapas av Chart.js -->
-      <canvas id="barChart"></canvas>
-      <canvas id="timelineChart"></canvas>
-      <canvas id="heatmapChart"></canvas>
-    </div>
-    <p>Diagrammen visar händelser per kategori, tidslinje per månad och kategori vs månad (heatmap) från data i `data.js`.</p>
-  </section>
+      <div class="grid2">
+        <div class="box">
+          <ul class="list">
+            <li><b>Inriktning</b>: definiera frågor, mål och prioriteringar.</li>
+            <li><b>Planering</b>: metod, källor, ansvar, tidslinje.</li>
+            <li><b>Inhämtning</b>: systematiskt samla data (källdiversitet).</li>
+            <li><b>Bearbetning</b>: strukturera, normalisera, validera.</li>
+            <li><b>Analys</b>: hypotesdrivet, indikatorer, alternativ.</li>
+            <li><b>Delgivning</b>: rätt format till rätt mottagare.</li>
+            <li><b>Feedback</b>: förbättra inriktning och indikatorlistor.</li>
+          </ul>
+        </div>
 
-  <!-- Sektion: Karta -->
-  <section id="karta">
-    <h2>Händelsekarta</h2>
-    <div id="map" style="height: 500px;"></div>
-    <div class="filters">
-      <label><input type="checkbox" value="TERROR" checked> Terror</label>
-      <!-- Fler filter för varje kategori -->
-    </div>
-    <p>Klicka på markörer för detaljer. Kartan är filterbar per kategori och kan visas helskärm.</p>
-  </section>
+        <div class="box">
+          <svg class="svg" viewBox="0 0 900 420" role="img" aria-label="Underrättelsecykeln">
+            <rect x="0" y="0" width="900" height="420" rx="18" fill="rgba(15,23,42,0.04)"/>
+            <text x="40" y="70" font-size="22" font-weight="700" fill="#0f172a">Underrättelsecykeln</text>
+            <text x="40" y="98" font-size="13" fill="#475569">Iterativ process: delgivning och feedback återförs till ny inriktning.</text>
 
-  <!-- Under sektionerna: återkopplingsslöfe, etc. -->
+            <g transform="translate(450,240)">
+              <circle r="140" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+              <circle r="78" fill="rgba(15,23,42,0.03)" stroke="#e5e7eb" stroke-width="2"/>
+              <text x="0" y="-6" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">Analysarbete</text>
+              <text x="0" y="16" text-anchor="middle" font-size="12" fill="#475569">spårbart • iterativt</text>
+            </g>
 
-  <footer>
-    <p>Datakälla: Svensk OSINT. Design: GitHub Pages (offline-läge).</p>
-  </footer>
+            <!-- noder -->
+            <g font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
+              <g>
+                <circle cx="450" cy="105" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="450" y="102" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Inriktning</text>
+                <text x="450" y="120" text-anchor="middle" font-size="11" fill="#475569">behov</text>
+              </g>
+              <g>
+                <circle cx="610" cy="175" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="610" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Planering</text>
+                <text x="610" y="190" text-anchor="middle" font-size="11" fill="#475569">metod</text>
+              </g>
+              <g>
+                <circle cx="610" cy="305" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="610" y="302" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Inhämtning</text>
+                <text x="610" y="320" text-anchor="middle" font-size="11" fill="#475569">data</text>
+              </g>
+              <g>
+                <circle cx="450" cy="360" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="450" y="357" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Analys</text>
+                <text x="450" y="375" text-anchor="middle" font-size="11" fill="#475569">hypotes</text>
+              </g>
+              <g>
+                <circle cx="290" cy="305" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="290" y="302" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Delgivning</text>
+                <text x="290" y="320" text-anchor="middle" font-size="11" fill="#475569">format</text>
+              </g>
+              <g>
+                <circle cx="290" cy="175" r="38" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+                <text x="290" y="172" text-anchor="middle" font-size="13" font-weight="700" fill="#0f172a">Feedback</text>
+                <text x="290" y="190" text-anchor="middle" font-size="11" fill="#475569">lärande</text>
+              </g>
 
-  <!-- Skript (alla lokala): -->
+              <!-- pilar -->
+              <path d="M450,143 C520,150 570,160 610,175" fill="none" stroke="#94a3b8" stroke-width="3"/>
+              <path d="M648,200 C690,230 690,260 648,290" fill="none" stroke="#94a3b8" stroke-width="3"/>
+              <path d="M610,343 C575,360 530,368 488,370" fill="none" stroke="#94a3b8" stroke-width="3"/>
+              <path d="M412,370 C365,365 330,350 308,330" fill="none" stroke="#94a3b8" stroke-width="3"/>
+              <path d="M290,267 C270,240 270,210 290,195" fill="none" stroke="#94a3b8" stroke-width="3"/>
+              <path d="M320,165 C350,135 390,120 430,118" fill="none" stroke="#94a3b8" stroke-width="3"/>
+
+              <!-- feedback-pil markerad -->
+              <path d="M290,137 C320,110 380,96 450,96" fill="none" stroke="#2563eb" stroke-width="3" stroke-dasharray="7 6"/>
+              <text x="80" y="120" font-size="12" fill="#2563eb">feedback → ny inriktning</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- OIAT -->
+    <section class="card" id="oiat">
+      <div class="card-head">
+        <div>
+          <h2>OIAT – kvalitetskriterier</h2>
+          <p class="muted">Objektivitet • Integritet • Aktualitet • Täckning</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#oiat">Helskärm</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <ul class="list">
+            <li><b>Objektivitet</b>: faktabaserat, skilj observation från tolkning.</li>
+            <li><b>Integritet</b>: spårbarhet, källhygien, undvik cherry-picking.</li>
+            <li><b>Aktualitet</b>: tidsstämplar, uppdateringsfrekvens, “freshness”.</li>
+            <li><b>Täckning</b>: källdiversitet, geografisk/tematisk täckning.</li>
+          </ul>
+          <div class="note">Använd OIAT som poängkort per källa, underlag eller bedömning.</div>
+        </div>
+
+        <div class="box">
+          <div class="box-title">OIAT-poängkort (interaktivt)</div>
+          <div class="sliders">
+            <label>Objektivitet <span id="vO">4</span><input id="sO" type="range" min="0" max="5" value="4"></label>
+            <label>Integritet <span id="vI">4</span><input id="sI" type="range" min="0" max="5" value="4"></label>
+            <label>Aktualitet <span id="vA">3</span><input id="sA" type="range" min="0" max="5" value="3"></label>
+            <label>Täckning <span id="vT">3</span><input id="sT" type="range" min="0" max="5" value="3"></label>
+          </div>
+          <canvas id="oiatChart" class="canvas" height="260"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- KÄNDA/OKÄNDA -->
+    <section class="card" id="known">
+      <div class="card-head">
+        <div>
+          <h2>Kända och okända</h2>
+          <p class="muted">Known knowns • Known unknowns • Unknown knowns • Unknown unknowns</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#known">Helskärm</button>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <ul class="list">
+            <li><b>Known knowns</b>: det vi vet och kan mäta – rutiner, KPI:er, trender.</li>
+            <li><b>Known unknowns</b>: luckor vi känner till – riktad inhämtning och triggers.</li>
+            <li><b>Unknown knowns</b>: dold kunskap internt – strukturera och få upp till ytan.</li>
+            <li><b>Unknown unknowns</b>: överraskningar – scenarier, resiliens, bred bevakning.</li>
+          </ul>
+        </div>
+
+        <div class="box">
+          <svg class="svg" viewBox="0 0 900 420" role="img" aria-label="Kända och okända matris">
+            <rect x="0" y="0" width="900" height="420" rx="18" fill="rgba(15,23,42,0.04)"/>
+            <text x="40" y="70" font-size="22" font-weight="700" fill="#0f172a">Kunskapsläge</text>
+            <text x="40" y="98" font-size="13" fill="#475569">Ramverk för osäkerhet, inhämtning och robusthet.</text>
+
+            <g transform="translate(110,135)">
+              <rect x="0" y="0" width="680" height="240" rx="16" fill="white" stroke="#e5e7eb" stroke-width="2"/>
+              <line x1="340" y1="0" x2="340" y2="240" stroke="#e5e7eb" stroke-width="2"/>
+              <line x1="0" y1="120" x2="680" y2="120" stroke="#e5e7eb" stroke-width="2"/>
+
+              <text x="340" y="-16" text-anchor="middle" font-size="12" fill="#64748b">Vet att vi vet?</text>
+              <text x="-22" y="120" transform="rotate(-90 -22 120)" text-anchor="middle" font-size="12" fill="#64748b">Vet vi att vi inte vet?</text>
+
+              <text x="18" y="28" font-size="14" font-weight="700" fill="#0f172a">Known knowns</text>
+              <text x="18" y="50" font-size="12" fill="#475569">mätning • förbättring</text>
+
+              <text x="358" y="28" font-size="14" font-weight="700" fill="#0f172a">Known unknowns</text>
+              <text x="358" y="50" font-size="12" fill="#475569">riktad inhämtning</text>
+
+              <text x="18" y="148" font-size="14" font-weight="700" fill="#0f172a">Unknown knowns</text>
+              <text x="18" y="170" font-size="12" fill="#475569">dold kunskap</text>
+
+              <text x="358" y="148" font-size="14" font-weight="700" fill="#0f172a">Unknown unknowns</text>
+              <text x="358" y="170" font-size="12" fill="#475569">scenarier • resiliens</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <!-- GRAFER -->
+    <section class="card" id="charts">
+      <div class="card-head">
+        <div>
+          <h2>Interaktiva grafer</h2>
+          <p class="muted">Byggda direkt på datasetet (utan externa bibliotek).</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#charts">Helskärm</button>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <label class="pill">Kategori:
+          <select id="catFilter"></select>
+        </label>
+        <label class="pill">Topplista:
+          <select id="geoMode">
+            <option value="country">Land</option>
+            <option value="place">Plats</option>
+          </select>
+        </label>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="box-title">Fördelning per kategori</div>
+          <canvas id="catChart" class="canvas" height="320"></canvas>
+        </div>
+        <div class="box">
+          <div class="box-title">Volym över tid (månad)</div>
+          <canvas id="timeChart" class="canvas" height="320"></canvas>
+        </div>
+      </div>
+
+      <div class="grid2">
+        <div class="box">
+          <div class="box-title">Heatmap (kategori × månad)</div>
+          <canvas id="heatChart" class="canvas" height="360"></canvas>
+        </div>
+        <div class="box">
+          <div class="box-title">Topplista (land/plats)</div>
+          <canvas id="geoChart" class="canvas" height="360"></canvas>
+        </div>
+      </div>
+
+      <div class="note">Hover på diagram för tooltip (enkel). Filtrera kategori för att ändra alla grafer.</div>
+    </section>
+
+    <!-- KARTA (IFRAME) -->
+    <section class="card" id="map">
+      <div class="card-head">
+        <div>
+          <h2>Karta – Veckobrevskartan</h2>
+          <p class="muted">Inbäddad interaktiv karta.</p>
+        </div>
+        <div class="actions">
+          <button class="btn" data-fullscreen="#map">Helskärm</button>
+          <a class="btn" href="https://veckobrevskartan.github.io/veckobrevskartan/" target="_blank" rel="noopener">Öppna i ny flik</a>
+        </div>
+      </div>
+
+      <div class="frame">
+        <iframe
+          title="Veckobrevskartan"
+          src="https://veckobrevskartan.github.io/veckobrevskartan/"
+          loading="lazy"
+          allow="fullscreen"
+        ></iframe>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <span>© Svensk OSINT</span>
+      <span class="muted">GitHub Pages • modulär presentation</span>
+    </footer>
+
+  </main>
+
   <script src="data.js"></script>
   <script src="charts.js"></script>
-  <!-- Leaflet JS (lokal fil) -->
-  <script src="leaflet.js"></script>
-  <script src="map.js"></script>
 </body>
 </html>
