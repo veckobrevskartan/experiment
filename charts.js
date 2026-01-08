@@ -1,8 +1,68 @@
 // charts.js
 (function () {
-  // ---------- helpers ----------
   const $ = (sel) => document.querySelector(sel);
 
+  const RAW = (window.events || []).slice();
+
+  // ---------- FULLSCREEN (robust + fallback) ----------
+  function enterFullscreen(el) {
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.mozRequestFullScreen || el.msRequestFullscreen;
+    if (fn) return fn.call(el);
+    return Promise.reject(new Error("Fullscreen unsupported"));
+  }
+
+  function exitFullscreen() {
+    const fn = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+    if (fn) return fn.call(document);
+  }
+
+  function isFullscreen() {
+    return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+  }
+
+  // Klickhantering: lyssna på knapparna direkt (inte delegation som kan störas)
+  function wireFullscreenButtons() {
+    document.querySelectorAll("[data-fullscreen]").forEach(btn => {
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const sel = btn.getAttribute("data-fullscreen");
+        const el = document.querySelector(sel);
+        if (!el) return;
+
+        try {
+          if (isFullscreen()) await exitFullscreen();
+          else await enterFullscreen(el);
+        } catch {
+          // Fallback: om fullscreen blockas, scrolla till sektionen och förstora visuellt
+          el.scrollIntoView({ behavior: "smooth", block: "start" });
+          el.style.outline = "3px solid rgba(37,99,235,.35)";
+          setTimeout(() => el.style.outline = "", 1200);
+        }
+
+        // När fullscreen togglas: redraw efter en tick
+        setTimeout(() => {
+          drawAll();
+          drawOIAT();
+          drawSpark();
+        }, 250);
+      }, true);
+    });
+
+    // När fullscreen ändras via ESC etc: redraw
+    ["fullscreenchange","webkitfullscreenchange","mozfullscreenchange","MSFullscreenChange"].forEach(evt => {
+      document.addEventListener(evt, () => {
+        setTimeout(() => {
+          drawAll();
+          drawOIAT();
+          drawSpark();
+        }, 150);
+      });
+    });
+  }
+
+  // ---------- DATA HELPERS ----------
   function monthKey(dateStr) {
     if (!dateStr) return "Okänd";
     const m = String(dateStr).match(/^(\d{4})-(\d{2})/);
@@ -18,35 +78,29 @@
     return s ? s : fallback;
   }
 
-  function clearCanvas(canvas) {
-    const ctx = canvas.getContext("2d");
+  // ---------- CANVAS RESIZE ----------
+  function resizeCanvasToBox(canvas) {
+    // Säkra att canvas matchar CSS-storlek
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
     const w = Math.max(2, Math.floor(rect.width * dpr));
     const h = Math.max(2, Math.floor(rect.height * dpr));
-    canvas.width = w;
-    canvas.height = h;
+    if (canvas.width !== w || canvas.height !== h) {
+      canvas.width = w;
+      canvas.height = h;
+    }
+    const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
     return { ctx, w: rect.width, h: rect.height };
   }
 
-  // ---------- fullscreen buttons ----------
-  document.addEventListener("click", (e) => {
-    const btn = e.target.closest("[data-fullscreen]");
-    if (!btn) return;
-    const sel = btn.getAttribute("data-fullscreen");
-    const el = document.querySelector(sel);
-    if (!el) return;
+  function clearCanvas(canvas) {
+    const { ctx, w, h } = resizeCanvasToBox(canvas);
+    ctx.clearRect(0, 0, w, h);
+    return { ctx, w, h };
+  }
 
-    if (document.fullscreenElement) document.exitFullscreen();
-    else el.requestFullscreen();
-  });
-
-  // ---------- data ----------
-  const RAW = (window.events || []).slice();
-
-  // ---------- KPIs + spark ----------
+  // ---------- KPI + spark ----------
   function buildKPIs() {
     const n = RAW.length;
     const cats = uniq(RAW.map(e => safeStr(e.category).toUpperCase())).length;
@@ -70,24 +124,24 @@
     const map = new Map();
     for (const e of list) {
       const k = monthKey(e.date);
+      if (k === "Okänd") continue;
       map.set(k, (map.get(k) || 0) + 1);
     }
-    const keys = Array.from(map.keys()).filter(k => k !== "Okänd").sort();
+    const keys = Array.from(map.keys()).sort();
     return { keys, vals: keys.map(k => map.get(k) || 0) };
   }
 
-  // ---------- simple charts ----------
+  // ---------- DRAWING PRIMITIVES ----------
   function drawLine(canvas, labels, values, title) {
     const { ctx, w, h } = clearCanvas(canvas);
-    const padL = 44, padR = 14, padT = 36, padB = 28;
+    const padL = 54, padR = 14, padT = 36, padB = 30;
+    const cw = w - padL - padR;
+    const ch = h - padT - padB;
+    const maxV = Math.max(1, ...values);
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "700 13px system-ui";
     ctx.fillText(title, 12, 22);
-
-    const cw = w - padL - padR;
-    const ch = h - padT - padB;
-    const maxV = Math.max(1, ...values);
 
     // grid
     ctx.strokeStyle = "rgba(15,23,42,0.08)";
@@ -108,31 +162,31 @@
     });
     ctx.stroke();
 
-    // dots
+    // points
     ctx.fillStyle = "#0f172a";
     labels.forEach((_, i) => {
       const x = padL + (i / Math.max(1, labels.length-1)) * cw;
       const y = padT + (1 - (values[i] / maxV)) * ch;
-      ctx.beginPath(); ctx.arc(x,y,2.4,0,Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(x,y,2.6,0,Math.PI*2); ctx.fill();
     });
 
-    // x labels (sparse)
+    // x labels sparse
     ctx.fillStyle = "#475569";
     ctx.font = "11px system-ui";
     const step = Math.max(1, Math.floor(labels.length/6));
     for (let i=0; i<labels.length; i+=step) {
       const x = padL + (i / Math.max(1, labels.length-1)) * cw;
-      ctx.fillText(labels[i], x-16, h-10);
+      ctx.fillText(labels[i], x-18, h-10);
     }
 
     // y labels
-    ctx.fillText(String(maxV), 10, padT+10);
-    ctx.fillText("0", 18, padT+ch);
+    ctx.fillText(String(maxV), 14, padT+10);
+    ctx.fillText("0", 24, padT+ch);
   }
 
   function drawBars(canvas, labels, values, title) {
     const { ctx, w, h } = clearCanvas(canvas);
-    const pad = 140;
+    const padL = 160;
     const top = 36;
 
     ctx.fillStyle = "#0f172a";
@@ -140,33 +194,30 @@
     ctx.fillText(title, 12, 22);
 
     const maxV = Math.max(1, ...values);
-    const barH = Math.max(10, (h - top - 18) / Math.max(1, labels.length) - 8);
+    const barH = Math.max(12, (h - top - 18) / Math.max(1, labels.length) - 8);
 
     ctx.font = "12px system-ui";
     labels.forEach((lab, i) => {
       const y = top + i*(barH+8);
       const v = values[i];
-      const bw = (w - pad - 20) * (v / maxV);
+      const bw = Math.max(2, (w - padL - 26) * (v / maxV));
 
-      // bar
       ctx.fillStyle = "rgba(37,99,235,0.35)";
-      ctx.fillRect(pad, y, bw, barH);
+      ctx.fillRect(padL, y, bw, barH);
       ctx.strokeStyle = "rgba(15,23,42,0.12)";
-      ctx.strokeRect(pad, y, bw, barH);
+      ctx.strokeRect(padL, y, bw, barH);
 
-      // label
       ctx.fillStyle = "#475569";
       ctx.fillText(lab, 12, y + barH - 2);
 
-      // value
       ctx.fillStyle = "#0f172a";
-      ctx.fillText(String(v), pad + bw + 8, y + barH - 2);
+      ctx.fillText(String(v), padL + bw + 8, y + barH - 2);
     });
   }
 
   function drawHeatmap(canvas, months, cats, matrix, title) {
     const { ctx, w, h } = clearCanvas(canvas);
-    const padL = 90, padT = 40, padR = 14, padB = 44;
+    const padL = 100, padT = 40, padR = 14, padB = 46;
 
     ctx.fillStyle = "#0f172a";
     ctx.font = "700 13px system-ui";
@@ -184,7 +235,7 @@
     for (let r=0; r<cats.length; r++) {
       for (let c=0; c<months.length; c++) {
         const v = matrix[r][c] || 0;
-        const a = 0.05 + (v/maxV)*0.65;
+        const a = 0.06 + (v/maxV)*0.7;
         ctx.fillStyle = `rgba(37,99,235,${a})`;
         ctx.fillRect(padL + c*cellW, padT + r*cellH, cellW, cellH);
         ctx.strokeStyle = "rgba(15,23,42,0.06)";
@@ -192,7 +243,6 @@
       }
     }
 
-    // labels
     ctx.fillStyle = "#475569";
     ctx.font = "11px system-ui";
 
@@ -211,16 +261,15 @@
     }
   }
 
-  // ---------- charts data computations ----------
+  // ---------- COMPUTATIONS ----------
   function computeCategoryCounts(list) {
     const m = new Map();
     list.forEach(e => {
       const c = safeStr(e.category, "OKÄND").toUpperCase();
       m.set(c, (m.get(c)||0) + 1);
     });
-    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]);
-    const top = arr.slice(0, 10);
-    return { labels: top.map(x=>x[0]), values: top.map(x=>x[1]) };
+    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+    return { labels: arr.map(x=>x[0]), values: arr.map(x=>x[1]) };
   }
 
   function computeHeat(list) {
@@ -251,7 +300,7 @@
     return { labels: arr.map(x=>x[0]), values: arr.map(x=>x[1]) };
   }
 
-  // ---------- OIAT slider chart ----------
+  // ---------- OIAT ----------
   function drawOIAT() {
     const O = +$("#sO").value, I = +$("#sI").value, A = +$("#sA").value, T = +$("#sT").value;
     $("#vO").textContent = O;
@@ -266,7 +315,7 @@
     const vals = [O,I,A,T];
     const maxV = 5;
 
-    const padL=140, top=36, barH=18, gap=14;
+    const padL=160, top=36, barH=18, gap=14;
     ctx.fillStyle="#0f172a";
     ctx.font="700 13px system-ui";
     ctx.fillText("OIAT-poäng (0–5)", 12, 22);
@@ -275,7 +324,7 @@
     labels.forEach((lab, i) => {
       const y = top + i*(barH+gap);
       const v = vals[i];
-      const bw = (w - padL - 30) * (v/maxV);
+      const bw = Math.max(2, (w - padL - 30) * (v/maxV));
 
       ctx.fillStyle="rgba(37,99,235,0.35)";
       ctx.fillRect(padL, y, bw, barH);
@@ -290,11 +339,12 @@
     });
   }
 
-  // ---------- main render ----------
+  // ---------- FILTERS / DRAW ----------
   function fillFilters() {
     const sel = $("#catFilter");
     sel.innerHTML = "";
     const cats = uniq(RAW.map(e => safeStr(e.category).toUpperCase())).sort();
+
     const optAll = document.createElement("option");
     optAll.value = "ALL";
     optAll.textContent = "Alla";
@@ -317,21 +367,17 @@
   function drawAll() {
     const filtered = getFiltered();
 
-    // category bars
     const cat = computeCategoryCounts(filtered);
     drawBars($("#catChart"), cat.labels, cat.values, "Händelser per kategori");
 
-    // time
     const t = computeMonthlyCounts(filtered);
     const last = t.keys.slice(-36);
     const lastV = t.vals.slice(-36);
     drawLine($("#timeChart"), last, lastV, "Per månad");
 
-    // heatmap
     const h = computeHeat(filtered);
     drawHeatmap($("#heatChart"), h.months, h.cats, h.matrix, "Kategori × månad");
 
-    // geo
     const mode = $("#geoMode").value;
     const g = computeGeoTop(filtered, mode);
     drawBars($("#geoChart"), g.labels, g.values, mode === "place" ? "Topplista – plats" : "Topplista – land");
@@ -345,12 +391,17 @@
   }
 
   function wireEvents() {
-    $("#catFilter").addEventListener("change", drawAll);
-    $("#geoMode").addEventListener("change", drawAll);
+    $("#catFilter").addEventListener("change", () => {
+      setTimeout(drawAll, 0);
+    });
+    $("#geoMode").addEventListener("change", () => {
+      setTimeout(drawAll, 0);
+    });
 
     ["sO","sI","sA","sT"].forEach(id => {
-      const el = $("#"+id);
-      el.addEventListener("input", drawOIAT);
+      $("#"+id).addEventListener("input", () => {
+        setTimeout(drawOIAT, 0);
+      });
     });
 
     window.addEventListener("resize", () => {
@@ -360,15 +411,19 @@
     });
   }
 
-  // ---------- init ----------
+  // ---------- INIT ----------
   document.addEventListener("DOMContentLoaded", () => {
     buildKPIs();
     fillFilters();
+    wireFullscreenButtons();
     wireEvents();
 
-    drawSpark();
-    drawAll();
-    drawOIAT();
+    // första rendering efter att layout satt sig
+    setTimeout(() => {
+      drawSpark();
+      drawAll();
+      drawOIAT();
+    }, 120);
   });
 
 })();
