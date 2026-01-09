@@ -40,6 +40,12 @@ body{
   object-fit:contain;
 }
 
+/* Stor logga (≈ 44px × 4) */
+.logo-xl{
+  width:176px;
+  height:176px;
+}
+
 h1{
   margin:0;
   font-size:18px;
@@ -141,7 +147,16 @@ h2{ margin:0; font-size:16px; }
 
 .bullets li{ margin:6px 0; }
 
-/* KPI */
+/* Video */
+.video{
+  display:block;
+  width:100%;
+  border-radius:12px;
+  border:1px solid var(--line);
+  background:#000;
+}
+
+/* KPI (finns kvar i CSS om du vill återanvända senare) */
 .kpis{
   display:grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
