@@ -1,3 +1,780 @@
+// charts.js (robust, utan externa bibliotek)
+// Förväntar sig att data.js definierar: window.events = [ ... ]
+// Stödjer events med fält: cat ELLER category, date, country, place, title, summary, url, lat, lng
+
+(() => {
+  "use strict";
+
+  const $  = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  // =========================
+  // Kategorier (som du angav)
+  // =========================
+  const CAT_ALIASES = {
+    DRONE:  ['uav','drönare','drone','quad','fpv'],
+    INFRA:  ['sabotage','infrastruktur','el','fiber','kabel','bro','tunnel'],
+    NUCLEAR:['kärn','nuclear','radioaktiv','uran','strål'],
+    TERROR: ['terror','attack','spräng','bomb'],
+    INTEL:  ['spion','underrätt','säpo','intel','kgb','gru','fsb'],
+    LEGAL:  ['dom','åtal','rättsfall','rättegång'],
+    MIL:    ['militär','försvar','brigad','regemente','övning'],
+    HYBRID: ['påverkan','hybrid','desinfo','psyop','reflexiv'],
+    MAR:    ['marin','sjöfart','tanker','hamn','fartyg','ais'],
+    GPS:    ['gps','gnss','jamming','störning','spoof'],
+    POLICY: ['politik','policy','myndighet','lag','förordning']
+  };
+
+  const CATS = {
+    DRONE:   { label:'Drönare / UAV',             emoji:'🛩️', color:'#b9e3ff', desc:'Incidenter med UAV/drönare.', iconUrl:'' },
+    INFRA:   { label:'Infrastruktur / sabotage',  emoji:'⚡',  color:'#ffe08a', desc:'Kritisk infrastruktur, sabotage, störningar.', iconUrl:'' },
+    NUCLEAR: { label:'Kärnenergi / farligt gods', emoji:'☢️',  color:'#ffd0d0', desc:'Kärntekniskt/farligt gods.', iconUrl:'' },
+    TERROR:  { label:'Terror / våld',             emoji:'💣',  color:'#ffc4b6', desc:'Terrorism och våldsbrott med hög påverkan.', iconUrl:'' },
+    INTEL:   { label:'Spionage / underrättelse',  emoji:'🕵️‍♂️', color:'#e6e6e6', desc:'Spioneri, underrättelse, säkerhet.', iconUrl:'' },
+    LEGAL:   { label:'Rättsfall / domar',         emoji:'⚖️',  color:'#c8ffcb', desc:'Juridik, domar och rättsfall.', iconUrl:'' },
+    MIL:     { label:'Militär / försvar',         emoji:'🪖',  color:'#b8efe6', desc:'Militär aktivitet och försvar.', iconUrl:'' },
+    HYBRID:  { label:'Påverkan / hybrid',         emoji:'🧠',  color:'#dfcffc', desc:'Informationspåverkan/hybridaktiviteter.', iconUrl:'' },
+    MAR:     { label:'Maritimt / skuggflotta',    emoji:'⚓',  color:'#cfe3ff', desc:'Händelser till sjöss/skuggflotta.', iconUrl:'' },
+    GPS:     { label:'GPS-störning / signal',     emoji:'📡',  color:'#eed9ff', desc:'GNSS-störningar och signalpåverkan.', iconUrl:'' },
+    POLICY:  { label:'Politik / policy',          emoji:'🏛️',  color:'#e9ffd4', desc:'Policy, myndigheter, styrdokument.', iconUrl:'' }
+  };
+
+  // =========================
+  // Normalisering & hjälpare
+  // =========================
+  const pad2 = (n) => String(n).padStart(2, "0");
+
+  function parseISODate(s) {
+    // s: "YYYY-MM-DD"
+    if (!s || typeof s !== "string") return null;
+    const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!m) return null;
+    const y = +m[1], mo = +m[2], d = +m[3];
+    const dt = new Date(Date.UTC(y, mo - 1, d));
+    return isNaN(dt.getTime()) ? null : dt;
+  }
+
+  function monthKeyFromDate(dt) {
+    // UTC month key
+    const y = dt.getUTCFullYear();
+    const m = dt.getUTCMonth() + 1;
+    return `${y}-${pad2(m)}`;
+  }
+
+  function detectCategory(e) {
+    const direct = (e && (e.cat || e.category)) ? String(e.cat || e.category).trim() : "";
+    if (direct && CATS[direct]) return direct;
+
+    const blob = [
+      e?.title, e?.summary, e?.place, e?.country, e?.url
+    ].filter(Boolean).join(" ").toLowerCase();
+
+    for (const [cat, words] of Object.entries(CAT_ALIASES)) {
+      for (const w of words) {
+        if (blob.includes(String(w).toLowerCase())) return cat;
+      }
+    }
+    // fallback
+    return "POLICY";
+  }
+
+  function normalizeEvents(raw) {
+    const out = [];
+    for (const e of (Array.isArray(raw) ? raw : [])) {
+      const dt = parseISODate(e?.date);
+      if (!dt) continue;
+      const cat = detectCategory(e);
+      out.push({
+        date: e.date,
+        dt,
+        month: monthKeyFromDate(dt),
+        cat,
+        country: (e.country || "").toString(),
+        place: (e.place || "").toString(),
+        title: (e.title || "").toString(),
+        summary: (e.summary || "").toString(),
+        url: (e.url || "").toString(),
+        lat: typeof e.lat === "number" ? e.lat : null,
+        lng: typeof e.lng === "number" ? e.lng : null,
+      });
+    }
+    // sort by date
+    out.sort((a,b) => a.dt - b.dt);
+    return out;
+  }
+
+  function uniq(arr) {
+    return Array.from(new Set(arr));
+  }
+
+  function clamp01(x) {
+    return Math.max(0, Math.min(1, x));
+  }
+
+  // =========================
+  // Canvas: DPI & text
+  // =========================
+  function setupCanvas(canvas) {
+    const ctx = canvas.getContext("2d");
+    const dpr = Math.max(1, window.devicePixelRatio || 1);
+
+    const rect = canvas.getBoundingClientRect();
+    const cssW = Math.max(1, rect.width);
+    const cssH = Math.max(1, rect.height || canvas.height || 300);
+
+    canvas.width  = Math.round(cssW * dpr);
+    canvas.height = Math.round(cssH * dpr);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+    ctx.clearRect(0, 0, cssW, cssH);
+
+    return { ctx, w: cssW, h: cssH };
+  }
+
+  function drawEmpty(canvas, title) {
+    const { ctx, w, h } = setupCanvas(canvas);
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = "#64748b";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(title || "Ingen data", 12, 22);
+    ctx.fillText("Kontrollera att data.js laddas och att window.events innehåller händelser.", 12, 44);
+  }
+
+  function niceMax(v) {
+    if (v <= 0) return 1;
+    const pow = Math.pow(10, Math.floor(Math.log10(v)));
+    const n = v / pow;
+    let m = 1;
+    if (n <= 1) m = 1;
+    else if (n <= 2) m = 2;
+    else if (n <= 5) m = 5;
+    else m = 10;
+    return m * pow;
+  }
+
+  function yTicks(maxV, ticks = 4) {
+    const m = niceMax(maxV);
+    const step = m / ticks;
+    const arr = [];
+    for (let i = 0; i <= ticks; i++) arr.push(step * i);
+    return { max: m, step, ticks: arr };
+  }
+
+  // =========================
+  // Data-aggregation
+  // =========================
+  function buildAgg(events) {
+    const months = uniq(events.map(e => e.month)).sort();
+    const cats = Object.keys(CATS);
+
+    const totalByMonth = new Map(months.map(m => [m, 0]));
+    const byCatMonth = new Map(); // cat -> Map(month->count)
+    for (const c of cats) byCatMonth.set(c, new Map(months.map(m => [m, 0])));
+
+    const totalByCat = new Map(cats.map(c => [c, 0]));
+    const byCountry = new Map();
+    const byPlace = new Map();
+
+    for (const e of events) {
+      totalByMonth.set(e.month, (totalByMonth.get(e.month) || 0) + 1);
+
+      if (!byCatMonth.has(e.cat)) byCatMonth.set(e.cat, new Map(months.map(m => [m, 0])));
+      byCatMonth.get(e.cat).set(e.month, (byCatMonth.get(e.cat).get(e.month) || 0) + 1);
+
+      totalByCat.set(e.cat, (totalByCat.get(e.cat) || 0) + 1);
+
+      if (e.country) byCountry.set(e.country, (byCountry.get(e.country) || 0) + 1);
+      if (e.place) byPlace.set(e.place, (byPlace.get(e.place) || 0) + 1);
+    }
+
+    return { months, cats, totalByMonth, byCatMonth, totalByCat, byCountry, byPlace };
+  }
+
+  // =========================
+  // Rendering: KPIs + range
+  // =========================
+  function renderKPIs(events, agg) {
+    const el = $("#kpis");
+    const range = $("#dataRange");
+    if (!el || !range) return;
+
+    const total = events.length;
+    const catsUsed = uniq(events.map(e => e.cat)).length;
+    const monthsUsed = agg.months.length;
+    const countriesUsed = uniq(events.map(e => e.country).filter(Boolean)).length;
+
+    el.innerHTML = "";
+    const items = [
+      { n: total, l: "Händelser" },
+      { n: catsUsed, l: "Kategorier" },
+      { n: monthsUsed, l: "Månader" },
+      { n: countriesUsed, l: "Länder" },
+    ];
+    for (const it of items) {
+      const d = document.createElement("div");
+      d.className = "kpi";
+      d.innerHTML = `<div class="n">${it.n}</div><div class="l">${it.l}</div>`;
+      el.appendChild(d);
+    }
+
+    if (events.length) {
+      const a = events[0].date;
+      const b = events[events.length - 1].date;
+      range.textContent = `Tidsintervall i data: ${a} – ${b}`;
+    } else {
+      range.textContent = "Tidsintervall i data: –";
+    }
+  }
+
+  // =========================
+  // Rendering: Spark multi (overview)
+  // =========================
+  function renderSparkLegend(agg, sparkCats, onChange) {
+    const host = $("#sparkLegend");
+    if (!host) return;
+
+    host.innerHTML = "";
+    const cats = Object.keys(CATS);
+
+    for (const c of cats) {
+      const meta = CATS[c];
+      const count = agg.totalByCat.get(c) || 0;
+
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.dataset.cat = c;
+      chip.style.borderColor = "var(--line)";
+      chip.style.background = sparkCats.has(c) ? "rgba(37,99,235,.10)" : "#fff";
+      chip.style.cursor = "pointer";
+
+      chip.innerHTML = `
+        <span class="emoji">${meta.emoji || ""}</span>
+        <span class="t">${meta.label}</span>
+        <span class="n">${count}</span>
+      `;
+
+      chip.addEventListener("click", () => {
+        if (sparkCats.has(c)) sparkCats.delete(c);
+        else sparkCats.add(c);
+        onChange();
+      });
+
+      host.appendChild(chip);
+    }
+  }
+
+  function drawSparkMulti(events, agg, sparkCats) {
+    const canvas = $("#sparkMulti");
+    if (!canvas) return;
+
+    if (!events.length || !agg.months.length) {
+      drawEmpty(canvas, "Volym över tid");
+      return;
+    }
+
+    const { ctx, w, h } = setupCanvas(canvas);
+
+    // padding
+    const padL = 40, padR = 12, padT = 12, padB = 26;
+    const iw = w - padL - padR;
+    const ih = h - padT - padB;
+
+    // build series
+    const months = agg.months;
+    const total = months.map(m => agg.totalByMonth.get(m) || 0);
+
+    const series = [];
+    for (const c of Object.keys(CATS)) {
+      if (!sparkCats.has(c)) continue;
+      const m = agg.byCatMonth.get(c);
+      const arr = months.map(mm => (m ? (m.get(mm) || 0) : 0));
+      series.push({ cat: c, arr });
+    }
+
+    const maxV = Math.max(1, ...total, ...series.flatMap(s => s.arr));
+    const yt = yTicks(maxV, 4);
+
+    // background
+    ctx.fillStyle = "#ffffff";
+    ctx.fillRect(0, 0, w, h);
+
+    // grid + y labels
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.lineWidth = 1;
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+    for (const v of yt.ticks) {
+      const y = padT + ih - (v / yt.max) * ih;
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + iw, y);
+      ctx.stroke();
+      ctx.fillText(String(Math.round(v)), 6, y + 4);
+    }
+
+    // x labels (sparsely)
+    const stepX = iw / Math.max(1, (months.length - 1));
+    const labelEvery = Math.max(1, Math.floor(months.length / 6));
+    for (let i = 0; i < months.length; i += labelEvery) {
+      const x = padL + i * stepX;
+      ctx.fillText(months[i], x - 18, padT + ih + 18);
+    }
+
+    function drawLine(arr, stroke, width, alpha = 1) {
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = width;
+      ctx.beginPath();
+      for (let i = 0; i < arr.length; i++) {
+        const x = padL + i * stepX;
+        const y = padT + ih - (arr[i] / yt.max) * ih;
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // category lines (thin)
+    for (const s of series) {
+      const col = (CATS[s.cat]?.color) || "#94a3b8";
+      drawLine(s.arr, col, 1.5, 0.9);
+    }
+
+    // total line (thicker)
+    drawLine(total, "#2563eb", 2.5, 1);
+
+    // title
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Volym över tid (total + kategorier)", padL, 18);
+  }
+
+  // =========================
+  // Rendering: Chips-filter (charts section)
+  // =========================
+  function renderCatChips(agg, activeCats, onChange) {
+    const host = $("#catChips");
+    if (!host) return;
+
+    host.innerHTML = "";
+
+    for (const c of Object.keys(CATS)) {
+      const meta = CATS[c];
+      const count = agg.totalByCat.get(c) || 0;
+
+      const chip = document.createElement("button");
+      chip.type = "button";
+      chip.className = "chip";
+      chip.dataset.cat = c;
+
+      const on = activeCats.has(c);
+      chip.style.background = on ? "rgba(37,99,235,.10)" : "#fff";
+      chip.style.borderColor = "var(--line)";
+      chip.style.cursor = "pointer";
+
+      chip.innerHTML = `
+        <span class="emoji">${meta.emoji || ""}</span>
+        <span class="t">${meta.label}</span>
+        <span class="n">${count}</span>
+      `;
+
+      chip.addEventListener("click", () => {
+        if (activeCats.has(c)) activeCats.delete(c);
+        else activeCats.add(c);
+
+        // skydd: om användaren släcker allt → slå på allt igen (så grafer inte blir tomma)
+        if (activeCats.size === 0) {
+          Object.keys(CATS).forEach(k => activeCats.add(k));
+        }
+        onChange();
+      });
+
+      host.appendChild(chip);
+    }
+  }
+
+  function filterEventsByCats(events, activeCats) {
+    if (!activeCats || activeCats.size === 0) return events;
+    return events.filter(e => activeCats.has(e.cat));
+  }
+
+  // =========================
+  // Chart: Fördelning per kategori (bar)
+  // =========================
+  function drawCatBar(canvasSel, agg, eventsFiltered) {
+    const canvas = $(canvasSel);
+    if (!canvas) return;
+
+    if (!eventsFiltered.length) {
+      drawEmpty(canvas, "Fördelning per kategori");
+      return;
+    }
+
+    const { ctx, w, h } = setupCanvas(canvas);
+    const padL = 46, padR = 12, padT = 16, padB = 28;
+    const iw = w - padL - padR;
+    const ih = h - padT - padB;
+
+    // counts from filtered set
+    const counts = new Map(Object.keys(CATS).map(c => [c, 0]));
+    for (const e of eventsFiltered) counts.set(e.cat, (counts.get(e.cat) || 0) + 1);
+
+    const cats = Object.keys(CATS).filter(c => (counts.get(c) || 0) > 0);
+    cats.sort((a,b) => (counts.get(b) || 0) - (counts.get(a) || 0));
+
+    const vals = cats.map(c => counts.get(c) || 0);
+    const maxV = Math.max(1, ...vals);
+    const yt = yTicks(maxV, 4);
+
+    // bg
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    // grid
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    for (const v of yt.ticks) {
+      const y = padT + ih - (v / yt.max) * ih;
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + iw, y);
+      ctx.stroke();
+      ctx.fillText(String(Math.round(v)), 8, y + 4);
+    }
+
+    // bars
+    const n = cats.length;
+    const gap = 8;
+    const bw = Math.max(10, (iw - gap * (n - 1)) / n);
+
+    for (let i = 0; i < n; i++) {
+      const c = cats[i];
+      const v = counts.get(c) || 0;
+      const x = padL + i * (bw + gap);
+      const bh = (v / yt.max) * ih;
+      const y = padT + ih - bh;
+
+      ctx.fillStyle = CATS[c]?.color || "#94a3b8";
+      ctx.fillRect(x, y, bw, bh);
+
+      // x labels (emoji)
+      ctx.fillStyle = "#0f172a";
+      ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+      ctx.fillText(CATS[c]?.emoji || "", x + 2, padT + ih + 18);
+    }
+
+    // title
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Fördelning per kategori", padL, 18);
+  }
+
+  // =========================
+  // Chart: Volym över tid (månad) – total line
+  // =========================
+  function drawTimeLine(canvasSel, agg, eventsFiltered) {
+    const canvas = $(canvasSel);
+    if (!canvas) return;
+
+    if (!eventsFiltered.length) {
+      drawEmpty(canvas, "Volym över tid (månad)");
+      return;
+    }
+
+    // rebuild total by month on filtered set
+    const months = uniq(eventsFiltered.map(e => e.month)).sort();
+    const totalByMonth = new Map(months.map(m => [m, 0]));
+    for (const e of eventsFiltered) totalByMonth.set(e.month, (totalByMonth.get(e.month) || 0) + 1);
+    const total = months.map(m => totalByMonth.get(m) || 0);
+
+    const { ctx, w, h } = setupCanvas(canvas);
+    const padL = 46, padR = 12, padT = 16, padB = 28;
+    const iw = w - padL - padR;
+    const ih = h - padT - padB;
+
+    const maxV = Math.max(1, ...total);
+    const yt = yTicks(maxV, 4);
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = "#e5e7eb";
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+    for (const v of yt.ticks) {
+      const y = padT + ih - (v / yt.max) * ih;
+      ctx.beginPath();
+      ctx.moveTo(padL, y);
+      ctx.lineTo(padL + iw, y);
+      ctx.stroke();
+      ctx.fillText(String(Math.round(v)), 8, y + 4);
+    }
+
+    const stepX = iw / Math.max(1, (months.length - 1));
+    const labelEvery = Math.max(1, Math.floor(months.length / 6));
+    for (let i = 0; i < months.length; i += labelEvery) {
+      const x = padL + i * stepX;
+      ctx.fillText(months[i], x - 18, padT + ih + 18);
+    }
+
+    // line
+    ctx.strokeStyle = "#2563eb";
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    for (let i = 0; i < total.length; i++) {
+      const x = padL + i * stepX;
+      const y = padT + ih - (total[i] / yt.max) * ih;
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // title
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Volym över tid (månad)", padL, 18);
+  }
+
+  // =========================
+  // Chart: Heatmap (kategori × månad)
+  // =========================
+  function drawHeatmap(canvasSel, eventsFiltered) {
+    const canvas = $(canvasSel);
+    if (!canvas) return;
+
+    if (!eventsFiltered.length) {
+      drawEmpty(canvas, "Heatmap");
+      return;
+    }
+
+    const months = uniq(eventsFiltered.map(e => e.month)).sort();
+    const cats = Object.keys(CATS);
+
+    const grid = new Map(); // key cat|month -> count
+    let maxV = 1;
+    for (const c of cats) {
+      for (const m of months) grid.set(`${c}|${m}`, 0);
+    }
+    for (const e of eventsFiltered) {
+      const k = `${e.cat}|${e.month}`;
+      const v = (grid.get(k) || 0) + 1;
+      grid.set(k, v);
+      if (v > maxV) maxV = v;
+    }
+
+    const { ctx, w, h } = setupCanvas(canvas);
+    const padL = 140, padR = 12, padT = 22, padB = 26;
+    const iw = w - padL - padR;
+    const ih = h - padT - padB;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    // cell sizes
+    const cw = iw / Math.max(1, months.length);
+    const ch = ih / Math.max(1, cats.length);
+
+    // draw cells
+    for (let r = 0; r < cats.length; r++) {
+      const c = cats[r];
+      for (let col = 0; col < months.length; col++) {
+        const m = months[col];
+        const v = grid.get(`${c}|${m}`) || 0;
+        const t = clamp01(v / maxV);
+
+        // base from cat color, apply alpha by intensity
+        ctx.fillStyle = CATS[c]?.color || "#94a3b8";
+        ctx.globalAlpha = 0.12 + 0.88 * t;
+        ctx.fillRect(padL + col * cw, padT + r * ch, cw - 1, ch - 1);
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // labels
+    ctx.fillStyle = "#64748b";
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+    const labelEvery = Math.max(1, Math.floor(months.length / 6));
+    for (let col = 0; col < months.length; col += labelEvery) {
+      ctx.fillText(months[col], padL + col * cw, padT + ih + 18);
+    }
+
+    for (let r = 0; r < cats.length; r++) {
+      const c = cats[r];
+      const y = padT + r * ch + ch * 0.65;
+      ctx.fillText(`${CATS[c]?.emoji || ""} ${CATS[c]?.label || c}`, 10, y);
+    }
+
+    // title
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText("Heatmap (kategori × månad)", padL, 16);
+  }
+
+  // =========================
+  // Chart: Topplista (land/plats)
+  // =========================
+  function drawGeoTop(canvasSel, eventsFiltered, mode) {
+    const canvas = $(canvasSel);
+    if (!canvas) return;
+
+    if (!eventsFiltered.length) {
+      drawEmpty(canvas, "Topplista");
+      return;
+    }
+
+    const keyFn = mode === "place" ? (e => e.place) : (e => e.country);
+    const map = new Map();
+
+    for (const e of eventsFiltered) {
+      const k = (keyFn(e) || "").trim();
+      if (!k) continue;
+      map.set(k, (map.get(k) || 0) + 1);
+    }
+
+    const items = Array.from(map.entries()).sort((a,b) => b[1] - a[1]).slice(0, 12);
+    const vals = items.map(x => x[1]);
+    const maxV = Math.max(1, ...vals);
+
+    const { ctx, w, h } = setupCanvas(canvas);
+    const padL = 180, padR = 12, padT = 22, padB = 18;
+    const iw = w - padL - padR;
+    const ih = h - padT - padB;
+
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.fillStyle = "#0f172a";
+    ctx.font = "13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+    ctx.fillText(`Topplista (${mode === "place" ? "plats" : "land"})`, padL, 16);
+
+    const rowH = ih / Math.max(1, items.length);
+    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
+
+    for (let i = 0; i < items.length; i++) {
+      const [name, v] = items[i];
+      const y = padT + i * rowH + rowH * 0.65;
+
+      // label
+      ctx.fillStyle = "#0f172a";
+      ctx.fillText(name, 10, y);
+
+      // bar
+      const bw = (v / maxV) * iw;
+      ctx.fillStyle = "rgba(37,99,235,.18)";
+      ctx.fillRect(padL, padT + i * rowH + 6, bw, Math.max(10, rowH - 10));
+
+      // value
+      ctx.fillStyle = "#475569";
+      ctx.fillText(String(v), padL + bw + 8, y);
+    }
+  }
+
+  // =========================
+  // Init + redraw
+  // =========================
+  function init() {
+    const raw = window.events;
+    if (!Array.isArray(raw)) {
+      console.error("charts.js: window.events saknas eller är inte en array. Kontrollera data.js.");
+      // försök ändå skriva tomma canvas om de finns:
+      ["#sparkMulti","#catChart","#timeChart","#heatChart","#geoChart"].forEach(sel => {
+        const c = $(sel);
+        if (c) drawEmpty(c, "Ingen data");
+      });
+      return;
+    }
+
+    const events = normalizeEvents(raw);
+    const aggAll = buildAgg(events);
+
+    // State
+    const sparkCats = new Set(Object.keys(CATS));     // för översiktens multi-line
+    const activeCats = new Set(Object.keys(CATS));    // för huvudgraferna
+    let geoMode = ($("#geoMode")?.value || "country");
+
+    // Buttons: markera/avmarkera (spark)
+    $("#selAllCats")?.addEventListener("click", () => {
+      Object.keys(CATS).forEach(k => sparkCats.add(k));
+      renderSparkLegend(aggAll, sparkCats, redrawSpark);
+      redrawSpark();
+    });
+
+    $("#selNoCats")?.addEventListener("click", () => {
+      sparkCats.clear(); // totalen visas ändå
+      renderSparkLegend(aggAll, sparkCats, redrawSpark);
+      redrawSpark();
+    });
+
+    // geo dropdown
+    $("#geoMode")?.addEventListener("change", (e) => {
+      geoMode = e.target.value;
+      redrawMain();
+    });
+
+    function redrawSpark() {
+      // bygg agg på ALLA events (översikten ska vara global)
+      const agg = aggAll;
+      drawSparkMulti(events, agg, sparkCats);
+      // uppdatera chip-styling
+      $$("#sparkLegend .chip").forEach(ch => {
+        const c = ch.dataset.cat;
+        ch.style.background = sparkCats.has(c) ? "rgba(37,99,235,.10)" : "#fff";
+      });
+    }
+
+    function redrawMain() {
+      const filtered = filterEventsByCats(events, activeCats);
+      const agg = buildAgg(filtered);
+
+      drawCatBar("#catChart", agg, filtered);
+      drawTimeLine("#timeChart", agg, filtered);
+      drawHeatmap("#heatChart", filtered);
+      drawGeoTop("#geoChart", filtered, geoMode);
+    }
+
+    // Render static UI
+    renderKPIs(events, aggAll);
+
+    renderSparkLegend(aggAll, sparkCats, () => {
+      renderSparkLegend(aggAll, sparkCats, redrawSpark);
+      redrawSpark();
+    });
+    redrawSpark();
+
+    renderCatChips(aggAll, activeCats, () => {
+      renderCatChips(aggAll, activeCats, redrawMain);
+      redrawMain();
+    });
+    redrawMain();
+
+    // Resize redraw (debounced)
+    let t = null;
+    window.addEventListener("resize", () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        redrawSpark();
+        redrawMain();
+      }, 120);
+    });
+  }
+
+  // =========================
+  // Start
+  // =========================
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
+})();
 // charts.js
 (function () {
   const $ = (sel) => document.querySelector(sel);
