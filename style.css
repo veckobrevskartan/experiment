@@ -173,7 +173,7 @@ h2{ margin:0; font-size:16px; }
   margin-top:4px;
 }
 
-/* OIAT sliders */
+/* OIAT */
 .sliders label{
   display:grid;
   grid-template-columns: 1fr auto;
@@ -193,43 +193,122 @@ h2{ margin:0; font-size:16px; }
   color:var(--text);
 }
 
-.oiat-mini{
+.oiat-result{
   margin-top:12px;
   display:flex;
-  gap:8px;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
   flex-wrap:wrap;
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px;
+  background:rgba(15,23,42,0.02);
 }
 
-.pill{
+.oiat-score .oiat-label{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.oiat-score .oiat-value{
+  font-size:18px;
+  font-weight:900;
+}
+
+.oiat-rag{
+  display:inline-flex;
+  align-items:center;
+  gap:10px;
   border:1px solid var(--line);
   border-radius:999px;
-  padding:6px 10px;
-  font-size:12.5px;
+  padding:8px 12px;
+  font-size:13px;
+  font-weight:700;
   background:#fff;
-  display:inline-flex;
-  gap:6px;
-  align-items:center;
 }
 
+.oiat-rag .dot{
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#64748b;
+}
+
+.oiat-rag[data-rag="green"] .dot{ background:#16a34a; }
+.oiat-rag[data-rag="yellow"] .dot{ background:#f59e0b; }
+.oiat-rag[data-rag="red"] .dot{ background:#dc2626; }
+
 /* Figure */
-.oiat-figure{
+.figure{
   border:1px solid var(--line);
   border-radius:14px;
   overflow:hidden;
   background:#fff;
 }
 
-.figure-actions{
-  padding:10px;
-  border-bottom:1px solid var(--line);
-  display:flex;
-  justify-content:flex-end;
-}
-
 .figure-img{
   display:block;
   width:100%;
   height:auto;
+}
+
+/* Kända/Okända cards */
+.kk-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+
+@media (max-width: 900px){
+  .kk-grid{ grid-template-columns: 1fr; }
+}
+
+.kk-card{
+  border:1px solid var(--line);
+  border-radius:14px;
+  padding:10px;
+  background:#fff;
+}
+
+.kk-title{
+  font-weight:900;
+  font-size:13px;
+  margin-bottom:6px;
+}
+
+.kk-card p{
+  margin:0;
+  color:#0f172a;
+  line-height:1.45;
+  font-size:13px;
+}
+
+/* Table */
+.table-wrap{
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:14px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  min-width:880px;
+  background:#fff;
+}
+
+th, td{
+  border-bottom:1px solid var(--line);
+  padding:10px;
+  text-align:left;
+  vertical-align:top;
+  font-size:13px;
+}
+
+th{
+  background:rgba(15,23,42,0.02);
+  font-weight:900;
 }
 
 /* Iframe frames */
@@ -250,61 +329,31 @@ h2{ margin:0; font-size:16px; }
   border:0;
 }
 
-/* Expand mode: höjer inbäddningar snyggt */
+/* Expand: gör modulen större */
+.card.expanded{
+  padding:18px;
+}
+
 .card.expanded .frame iframe{
   height:92vh;
   min-height:720px;
 }
 
-/* Lightbox */
-.lightbox{
-  position:fixed;
-  inset:0;
-  background:rgba(2,6,23,.72);
-  display:none;
-  align-items:center;
-  justify-content:center;
-  padding:16px;
-  z-index:1000;
-}
-
-.lightbox.open{ display:flex; }
-
-.panel{
-  width:min(1100px, 100%);
-  max-height:92vh;
-  background:#fff;
-  border-radius:16px;
-  overflow:hidden;
-  border:1px solid rgba(15,23,42,.18);
-  box-shadow:0 24px 70px rgba(0,0,0,.35);
-  display:flex;
-  flex-direction:column;
-}
-
-.panel-head{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding:12px 14px;
-  border-bottom:1px solid var(--line);
-}
-
-.panel-body{
-  padding:12px;
-  overflow:auto;
-}
-
-.panel-body img{
+/* Fullscreen: gör modulen snygg i fullscreen */
+.card:fullscreen{
+  border-radius:0;
+  margin:0;
+  height:100%;
   width:100%;
-  height:auto;
-  display:block;
-  border:1px solid var(--line);
-  border-radius:12px;
+  max-width:none;
+  padding:18px;
 }
 
-/* Footer */
+.card:fullscreen .frame iframe{
+  height:100vh;
+  min-height:100vh;
+}
+
 .footer{
   display:flex;
   justify-content:space-between;
