@@ -38,7 +38,7 @@
           <div class="note" id="dataRange"></div>
         </div>
 
-        <!-- NY: Volym över tid (total + kategorier + markera/avmarkera) -->
+        <!-- Volym över tid (total + kategorier) -->
         <div class="box">
           <div class="box-title">Volym över tid (total + kategorier)</div>
 
@@ -50,7 +50,6 @@
 
           <div id="sparkLegend" class="chips" aria-label="Kategorier (legend)"></div>
 
-          <!-- OBS: charts.js använder denna -->
           <canvas id="sparkMulti" class="canvas" height="260"></canvas>
 
           <div class="note">Totalen visas alltid. Kategorilinjer kan slås av/på.</div>
@@ -177,9 +176,10 @@
           <div style="margin-top:12px;">
             <div class="box-title" style="margin-bottom:8px;">OIAT-modellen (källtyper + kvalitetssäkring)</div>
 
-            <!-- Knapp + bild (fullscreen) -->
             <div class="oiat-figure" style="position:relative;">
-              <button class="btn btn-full" type="button" id="oiatFullBtn">Visa helskärm</button>
+              <button class="btn" type="button" id="oiatFullBtn" style="position:absolute; top:10px; right:10px; z-index:3;">
+                Visa helskärm
+              </button>
               <img
                 id="oiatImg"
                 src="oiat-modellen.png"
@@ -280,7 +280,7 @@
               <text x="18" y="170" font-size="12" fill="#475569">dold kunskap</text>
 
               <text x="358" y="148" font-size="14" font-weight="700" fill="#0f172a">Unknown unknowns</text>
-              <text x="358" y="170" text-anchor="start" font-size="12" fill="#475569">scenarier • resiliens</text>
+              <text x="358" y="170" font-size="12" fill="#475569">scenarier • resiliens</text>
             </g>
           </svg>
         </div>
@@ -382,5 +382,115 @@
   <!-- Viktigt: data.js måste definiera window.events -->
   <script src="data.js"></script>
   <script src="charts.js"></script>
+
+  <!-- Säker, fristående logik för Expandera + OIAT-score + helskärm (kraschar inte andra grafer) -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      // ===== Expandera-kort (fungerar oavsett charts.js) =====
+      document.querySelectorAll("[data-expand]").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const sel = btn.getAttribute("data-expand");
+          const card = sel ? document.querySelector(sel) : null;
+          if (!card) return;
+          const isOn = card.classList.toggle("expanded");
+          btn.textContent = isOn ? "Stäng" : "Expandera";
+        });
+      });
+
+      // ===== OIAT: score + RAG + helskärm (idempotent) =====
+      if (!window.__oiat_inited) {
+        window.__oiat_inited = true;
+
+        const $ = (id) => document.getElementById(id);
+
+        const sO = $("sO"), sI = $("sI"), sA = $("sA"), sT = $("sT");
+        const vO = $("vO"), vI = $("vI"), vA = $("vA"), vT = $("vT");
+
+        const outScoreRight = $("oiatScore");
+        const outRagRight   = $("oiatRag");
+        const outScoreLeft  = $("oiatScoreInline");
+        const outRagLeft    = $("oiatRagInline");
+
+        function ragFromScore(score){
+          if (score < 2.5) return { key:"RÖD",  text:"RÖD – otillräckligt" };
+          if (score < 3.5) return { key:"GUL",  text:"GUL – komplettera" };
+          return             { key:"GRÖN", text:"GRÖN – robust" };
+        }
+
+        function setBadge(el, rag){
+          if(!el) return;
+          el.textContent = rag.text;
+          el.style.padding = "6px 10px";
+          el.style.borderRadius = "999px";
+          el.style.border = "1px solid var(--line)";
+          el.style.background = "#f8fafc";
+          if(rag.key === "RÖD") el.style.background = "rgba(239,68,68,.12)";
+          if(rag.key === "GUL") el.style.background = "rgba(245,158,11,.14)";
+          if(rag.key === "GRÖN") el.style.background = "rgba(34,197,94,.14)";
+        }
+
+        function updateOIAT(){
+          if(!sO || !sI || !sA || !sT || !vO || !vI || !vA || !vT) return;
+
+          const O = Number(sO.value);
+          const I = Number(sI.value);
+          const A = Number(sA.value);
+          const T = Number(sT.value);
+
+          vO.textContent = O;
+          vI.textContent = I;
+          vA.textContent = A;
+          vT.textContent = T;
+
+          const score = (O + I + A + T) / 4;
+          const scoreTxt = score.toFixed(2);
+          const rag = ragFromScore(score);
+
+          if(outScoreRight) outScoreRight.textContent = scoreTxt;
+          if(outScoreLeft)  outScoreLeft.textContent  = scoreTxt;
+
+          setBadge(outRagRight, rag);
+          if(outRagLeft) outRagLeft.textContent = rag.text;
+        }
+
+        ["input","change"].forEach(evt=>{
+          if(sO) sO.addEventListener(evt, updateOIAT);
+          if(sI) sI.addEventListener(evt, updateOIAT);
+          if(sA) sA.addEventListener(evt, updateOIAT);
+          if(sT) sT.addEventListener(evt, updateOIAT);
+        });
+
+        updateOIAT();
+
+        // Helsskärm/lightbox
+        const fullBtn  = $("oiatFullBtn");
+        const lb       = $("oiatLightbox");
+        const closeBtn = $("oiatCloseBtn");
+
+        function openLB(){
+          if(!lb) return;
+          lb.classList.add("open");
+          lb.setAttribute("aria-hidden","false");
+          document.body.style.overflow = "hidden";
+        }
+        function closeLB(){
+          if(!lb) return;
+          lb.classList.remove("open");
+          lb.setAttribute("aria-hidden","true");
+          document.body.style.overflow = "";
+        }
+
+        if(fullBtn && lb) fullBtn.addEventListener("click", openLB);
+        if(closeBtn && lb) closeBtn.addEventListener("click", closeLB);
+
+        if(lb){
+          lb.addEventListener("click", (e)=>{ if(e.target === lb) closeLB(); });
+          document.addEventListener("keydown", (e)=>{
+            if(e.key === "Escape" && lb.classList.contains("open")) closeLB();
+          });
+        }
+      }
+    });
+  </script>
 </body>
 </html>
