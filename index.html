@@ -38,10 +38,22 @@
           <div class="note" id="dataRange"></div>
         </div>
 
+        <!-- NY: Volym över tid (total + kategorier + markera/avmarkera) -->
         <div class="box">
-          <div class="box-title">Volym över tid (snabb)</div>
-          <canvas id="spark" class="canvas" height="260"></canvas>
-          <div class="note">Tips: expandera en modul och presentera den separat.</div>
+          <div class="box-title">Volym över tid (total + kategorier)</div>
+
+          <div class="toolbar" style="margin-top:8px;">
+            <button class="btn" type="button" id="selAllCats">Markera alla</button>
+            <button class="btn" type="button" id="selNoCats">Avmarkera alla</button>
+            <span class="pill muted">Klicka i legenden för att visa/dölja kategorier</span>
+          </div>
+
+          <div id="sparkLegend" class="chips" aria-label="Kategorier (legend)"></div>
+
+          <!-- OBS: charts.js använder denna -->
+          <canvas id="sparkMulti" class="canvas" height="260"></canvas>
+
+          <div class="note">Totalen visas alltid. Kategorilinjer kan slås av/på.</div>
         </div>
       </div>
     </section>
@@ -148,15 +160,37 @@
       </div>
 
       <div class="grid2">
+        <!-- NY: Förklaring + bild + uträknat OIAT-score + RAG -->
         <div class="box">
-          <div class="box-title">Definition (kort)</div>
-          <ul class="list">
-            <li><b>Objektivitet</b>: skilj observation från tolkning.</li>
-            <li><b>Integritet</b>: spårbarhet, källhygien, undvik cherry-picking.</li>
-            <li><b>Aktualitet</b>: tidsstämplar, uppdateringsfrekvens.</li>
-            <li><b>Täckning</b>: källdiversitet och perspektivbredd.</li>
-          </ul>
-          <div class="note">Poängsätt ett underlag, en källa eller en bedömning.</div>
+          <div class="box-title">OIAT-modellen (vad den betyder i praktiken)</div>
+
+          <p class="muted" style="margin:0 0 10px;">
+            OIAT används för att kvalitetssäkra källor och underlag innan de blir analys, varning eller rapportprodukt.
+            Modellen hjälper dig att skilja observation från tolkning, bedöma spårbarhet, kontrollera aktualitet och se om
+            underlaget har tillräcklig täckning.
+          </p>
+
+          <!-- Lägg din OIAT-bild i repot med exakt filnamn nedan -->
+          <img class="svg" src="oiat-modellen.png" alt="OIAT-modellen: källtyper och kvalitetssäkring" />
+
+          <div class="note" style="margin-top:10px;">
+            <b>Poängskala (0–5):</b> 0=Otjänlig/okänd, 1=Mycket svag, 2=Svag, 3=Godtagbar, 4=Stark, 5=Mycket stark.
+            <br/>
+            <b>RAG-trösklar:</b> Röd (&lt; 2,5) = otillräckligt, Gul (2,5–3,5) = användbar men komplettera, Grön (≥ 3,5) = robust underlag.
+          </div>
+
+          <div class="oiat-scoreline">
+            <span class="pill"><b>OIAT-score:</b> <span id="oiatScore">–</span>/5</span>
+            <span class="badge" id="oiatRag">–</span>
+          </div>
+
+          <div class="note">
+            <b>Så använder du OIAT snabbt:</b><br/>
+            O (Objektivitet): Är detta observation eller tolkning? Finns bias?<br/>
+            I (Integritet): Kan jag spåra tillbaka till ursprung? Har något manipulerats?<br/>
+            A (Aktualitet): När hände det? När publicerades det? Är det fortfarande relevant?<br/>
+            T (Täckning): Har jag fler källtyper/perspektiv? Saknas geografier/aktörer/tidslinje?
+          </div>
         </div>
 
         <div class="box">
@@ -239,7 +273,6 @@
         </div>
       </div>
 
-      <!-- Toolbar: behåller topplista, men tar bort singel-kategori-dropdown -->
       <div class="toolbar">
         <label class="pill">Topplista:
           <select id="geoMode">
@@ -250,7 +283,7 @@
         <span class="pill muted">Klicka kategorierna nedan för att filtrera.</span>
       </div>
 
-      <!-- Chips-rad (måste finnas för nya charts.js) -->
+      <!-- Chips-rad (måste finnas för charts.js) -->
       <div id="catChips" class="chips"></div>
 
       <div class="grid2">
