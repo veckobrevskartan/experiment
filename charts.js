@@ -3,7 +3,7 @@
   const $ = (sel) => document.querySelector(sel);
 
   // =========================
-  // KATEGORIER (från din karta)
+  // Kategorier
   // =========================
   const CAT_ALIASES = {
     DRONE:['uav','drönare','drone','quad','fpv'],
@@ -34,19 +34,17 @@
   };
 
   // =========================
-  // Expandera via CSS overlay
+  // Expandera (kort)
   // =========================
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-expand]");
     if (!btn) return;
-
     const sel = btn.getAttribute("data-expand");
     const card = document.querySelector(sel);
     if (!card) return;
 
     const open = card.classList.toggle("expanded");
     btn.textContent = open ? "Stäng" : "Expandera";
-
     if (open) card.scrollIntoView({ behavior: "smooth", block: "start" });
     setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
   }, true);
@@ -58,20 +56,18 @@
     const s = (x ?? "").toString().trim();
     return s ? s : fallback;
   }
+
   function monthKey(dateStr) {
     const m = String(dateStr || "").match(/^(\d{4})-(\d{2})/);
     return m ? `${m[1]}-${m[2]}` : "Okänd";
   }
+
   function uniq(arr) {
     return Array.from(new Set(arr)).filter(Boolean);
   }
 
-  // Canonical category:
-  // - trim/uppercase
-  // - om saknas / okänd: försök hitta via alias i title+summary+place
   function canonicalCat(ev) {
     let c = safeStr(ev.cat || ev.category || "").trim().toUpperCase();
-
     if (c && CATS[c]) return c;
 
     const blob = [
@@ -84,7 +80,7 @@
     for (const [key, words] of Object.entries(CAT_ALIASES)) {
       if (words.some(w => blob.includes(w))) return key;
     }
-    return c || "POLICY"; // fallback (byt till "OKÄND" om du vill)
+    return c && CATS[c] ? c : "POLICY";
   }
 
   function normalizeEvents(input) {
@@ -108,7 +104,7 @@
   const RAW = normalizeEvents(window.events || window.rawEvents || []);
 
   // =========================
-  // Canvas sizing
+  // Canvas utils
   // =========================
   function resizeCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
@@ -116,13 +112,13 @@
     const w = Math.max(2, Math.floor(rect.width * dpr));
     const h = Math.max(2, Math.floor(rect.height * dpr));
     if (canvas.width !== w || canvas.height !== h) {
-      canvas.width = w;
-      canvas.height = h;
+      canvas.width = w; canvas.height = h;
     }
     const ctx = canvas.getContext("2d");
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     return { ctx, w: rect.width, h: rect.height };
   }
+
   function clear(canvas) {
     const { ctx, w, h } = resizeCanvas(canvas);
     ctx.clearRect(0, 0, w, h);
@@ -156,9 +152,9 @@
   }
 
   // =========================
-  // Category chips (multi-select)
+  // Filter (chips för huvudgraferna)
   // =========================
-  const activeCats = new Set(Object.keys(CATS)); // start: alla
+  const activeCats = new Set(Object.keys(CATS));
   function countByCat(list) {
     const m = new Map();
     list.forEach(e => m.set(e.cat, (m.get(e.cat) || 0) + 1));
@@ -189,20 +185,10 @@
       btn.addEventListener("click", () => {
         const k = btn.getAttribute("data-cat");
         if (!k) return;
-
-        // toggla
-        if (activeCats.has(k)) activeCats.delete(k);
-        else activeCats.add(k);
-
-        // om man råkar slå av alla: slå på alla igen
-        if (activeCats.size === 0) {
-          Object.keys(CATS).forEach(x => activeCats.add(x));
-        }
-
+        if (activeCats.has(k)) activeCats.delete(k); else activeCats.add(k);
+        if (activeCats.size === 0) Object.keys(CATS).forEach(x => activeCats.add(x));
         renderCatChips();
         drawAll();
-        drawSpark();
-        drawOIAT();
       });
     });
   }
@@ -229,28 +215,23 @@
     const m = new Map();
     list.forEach(e => m.set(e.cat, (m.get(e.cat)||0) + 1));
     const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0, 10);
-    // map label
     return {
-      labels: arr.map(([k]) => `${CATS[k]?.emoji || ""} ${k}`.trim()),
+      labels: arr.map(([k]) => `${CATS[k]?.emoji || ""} ${CATS[k]?.label || k}`.trim()),
       values: arr.map(([,v]) => v)
     };
   }
 
   function heat(list) {
     const months = uniq(list.map(e => monthKey(e.date))).filter(m=>m!=="Okänd").sort();
-    const cats = Object.keys(CATS); // visa alltid i samma ordning
-
+    const cats = Object.keys(CATS);
     const mi = new Map(months.map((m,i)=>[m,i]));
     const ci = new Map(cats.map((c,i)=>[c,i]));
     const matrix = Array.from({length: cats.length}, ()=> Array.from({length: months.length}, ()=>0));
-
     list.forEach(e => {
-      const m = monthKey(e.date);
-      const c = e.cat;
+      const m = monthKey(e.date), c = e.cat;
       if (!mi.has(m) || !ci.has(c)) return;
       matrix[ci.get(c)][mi.get(m)] += 1;
     });
-
     return { months, cats, matrix };
   }
 
@@ -265,7 +246,7 @@
   }
 
   // =========================
-  // Drawing
+  // Drawing (enkla canvas)
   // =========================
   function drawLine(canvas, labels, values, title) {
     const { ctx, w, h } = clear(canvas);
@@ -305,7 +286,7 @@
 
   function drawBars(canvas, labels, values, title) {
     const { ctx, w, h } = clear(canvas);
-    const padL=180, top=36;
+    const padL=220, top=36;
     const maxV = Math.max(1, ...values);
 
     ctx.fillStyle="#0f172a";
@@ -335,7 +316,7 @@
 
   function drawHeat(canvas, months, cats, matrix, title) {
     const { ctx, w, h } = clear(canvas);
-    const padL=140, padT=40, padR=14, padB=46;
+    const padL=220, padT=40, padR=14, padB=46;
     const cw = w - padL - padR;
     const ch = h - padT - padB;
     const cellW = cw/Math.max(1,months.length);
@@ -370,7 +351,6 @@
       ctx.restore();
     }
 
-    // rader: visa emoji+label
     for (let i=0;i<cats.length;i++){
       const k = cats[i];
       const meta = CATS[k];
@@ -380,7 +360,167 @@
   }
 
   // =========================
-  // OIAT chart
+  // 1) MULTI-LINJE "Volym över tid" (ÖVERSIKT)
+  // =========================
+  const sparkCats = new Set(Object.keys(CATS)); // vilka kategorilinjer som visas
+
+  function monthlyByCat(list) {
+    const months = uniq(list.map(e => monthKey(e.date))).filter(m=>m!=="Okänd").sort();
+    const cats = Object.keys(CATS);
+    const mi = new Map(months.map((m,i)=>[m,i]));
+    const series = {};
+    cats.forEach(c => series[c] = Array(months.length).fill(0));
+    const total = Array(months.length).fill(0);
+
+    list.forEach(e => {
+      const m = monthKey(e.date);
+      if (!mi.has(m)) return;
+      const idx = mi.get(m);
+      total[idx] += 1;
+      if (series[e.cat]) series[e.cat][idx] += 1;
+    });
+
+    return { months, total, series };
+  }
+
+  function renderSparkLegend() {
+    const el = $("#sparkLegend");
+    if (!el) return;
+
+    const counts = countByCat(RAW);
+    const keys = Object.keys(CATS);
+
+    el.innerHTML = keys.map(k => {
+      const meta = CATS[k];
+      const on = sparkCats.has(k);
+      const n = counts.get(k) || 0;
+      return `
+        <button class="chip" type="button" data-spark-cat="${k}" aria-pressed="${on}">
+          <span>${meta.emoji}</span>
+          <span>${meta.label}</span>
+          <span class="count">${n}</span>
+        </button>
+      `;
+    }).join("");
+
+    el.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-spark-cat");
+        if (!k) return;
+        if (sparkCats.has(k)) sparkCats.delete(k); else sparkCats.add(k);
+        renderSparkLegend();
+        drawSparkMulti();
+      });
+    });
+
+    const allBtn = $("#selAllCats");
+    const noneBtn = $("#selNoCats");
+
+    if (allBtn && !allBtn.__wired) {
+      allBtn.__wired = true;
+      allBtn.addEventListener("click", () => {
+        Object.keys(CATS).forEach(k => sparkCats.add(k));
+        renderSparkLegend();
+        drawSparkMulti();
+      });
+    }
+    if (noneBtn && !noneBtn.__wired) {
+      noneBtn.__wired = true;
+      noneBtn.addEventListener("click", () => {
+        sparkCats.clear();
+        renderSparkLegend();
+        drawSparkMulti();
+      });
+    }
+  }
+
+  // färger: deterministiska, men enkla (utan att du behöver ange dem i CSS)
+  function catColor(idx, alpha=1) {
+    const base = [
+      [37,99,235],[16,185,129],[245,158,11],[239,68,68],[124,58,237],
+      [14,165,233],[234,88,12],[100,116,139],[217,70,239],[34,197,94],[59,130,246]
+    ];
+    const c = base[idx % base.length];
+    return `rgba(${c[0]},${c[1]},${c[2]},${alpha})`;
+  }
+
+  function drawSparkMulti() {
+    const canvas = $("#sparkMulti");
+    if (!canvas) return;
+
+    const { months, total, series } = monthlyByCat(RAW);
+    const N = months.length;
+    const lastN = Math.min(24, N); // visa senaste 24 månader
+    const m = months.slice(N-lastN);
+    const tot = total.slice(N-lastN);
+
+    const activeKeys = Object.keys(CATS).filter(k => sparkCats.has(k));
+    const seriesCut = {};
+    activeKeys.forEach(k => seriesCut[k] = (series[k] || []).slice(N-lastN));
+
+    const { ctx, w, h } = clear(canvas);
+    const padL=54, padR=14, padT=36, padB=30;
+    const cw = w - padL - padR;
+    const ch = h - padT - padB;
+
+    // max baserat på total (så total alltid syns bra)
+    const maxV = Math.max(1, ...tot);
+
+    ctx.fillStyle="#0f172a";
+    ctx.font="700 13px system-ui";
+    ctx.fillText("Volym över tid (total + kategorier)", 12, 22);
+
+    // grid
+    ctx.strokeStyle="rgba(15,23,42,0.08)";
+    for (let i=0;i<=4;i++){
+      const y = padT + (i/4)*ch;
+      ctx.beginPath(); ctx.moveTo(padL,y); ctx.lineTo(padL+cw,y); ctx.stroke();
+    }
+
+    // TOTAL (tjock)
+    ctx.strokeStyle="rgba(37,99,235,1)";
+    ctx.lineWidth=2.6;
+    ctx.beginPath();
+    for (let i=0;i<m.length;i++){
+      const x = padL + (i/Math.max(1,m.length-1))*cw;
+      const y = padT + (1-(tot[i]/maxV))*ch;
+      if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+    }
+    ctx.stroke();
+
+    // kategorier (tunnare)
+    const keys = Object.keys(CATS);
+    activeKeys.forEach(k => {
+      const idx = keys.indexOf(k);
+      const vals = seriesCut[k] || [];
+      ctx.strokeStyle = catColor(idx, 0.65);
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      for (let i=0;i<m.length;i++){
+        const x = padL + (i/Math.max(1,m.length-1))*cw;
+        const y = padT + (1-((vals[i]||0)/maxV))*ch;
+        if (i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      }
+      ctx.stroke();
+    });
+
+    // x labels
+    ctx.fillStyle="#475569";
+    ctx.font="11px system-ui";
+    const step = Math.max(1, Math.floor(m.length/6));
+    for (let i=0;i<m.length;i+=step){
+      const x = padL + (i/Math.max(1,m.length-1))*cw;
+      ctx.fillText(m[i], x-18, h-10);
+    }
+
+    // liten legendtext
+    ctx.fillStyle="#475569";
+    ctx.font="11px system-ui";
+    ctx.fillText("Total = blå linje. Kategorier = tunna linjer (styr via legend).", 12, h-12);
+  }
+
+  // =========================
+  // 2) OIAT: rita + beräkna score + RAG
   // =========================
   function drawOIAT(){
     const sO=$("#sO"), sI=$("#sI"), sA=$("#sA"), sT=$("#sT");
@@ -391,11 +531,26 @@
     const O=+sO.value, I=+sI.value, A=+sA.value, T=+sT.value;
     vO.textContent=O; vI.textContent=I; vA.textContent=A; vT.textContent=T;
 
+    // Uträknat värde: snitt (0–5)
+    const score = (O + I + A + T) / 4;
+    const scoreEl = $("#oiatScore");
+    if (scoreEl) scoreEl.textContent = score.toFixed(2);
+
+    // RAG-trösklar enligt din bild
+    const ragEl = $("#oiatRag");
+    if (ragEl) {
+      ragEl.classList.remove("red","amber","green");
+      if (score < 2.5) { ragEl.textContent = "RÖD – otillräckligt"; ragEl.classList.add("red"); }
+      else if (score < 3.5) { ragEl.textContent = "GUL – komplettera"; ragEl.classList.add("amber"); }
+      else { ragEl.textContent = "GRÖN – robust"; ragEl.classList.add("green"); }
+    }
+
+    // Rita staplar
     const labels=["Objektivitet","Integritet","Aktualitet","Täckning"];
     const vals=[O,I,A,T];
     const { ctx, w } = clear(canvas);
 
-    const padL=160, top=36, barH=18, gap=14;
+    const padL=180, top=36, barH=18, gap=14;
 
     ctx.fillStyle="#0f172a";
     ctx.font="700 13px system-ui";
@@ -419,7 +574,7 @@
   }
 
   // =========================
-  // Draw all
+  // Huvudgrafer
   // =========================
   function drawAll(){
     const list = filtered();
@@ -441,13 +596,6 @@
     const c4=$("#geoChart"); if (c4) drawBars(c4, g.labels, g.values, mode==="place" ? "Topplista – plats" : "Topplista – land");
   }
 
-  function drawSpark(){
-    const t = monthlyCounts(filtered());
-    const k = t.keys.slice(-18);
-    const v = t.vals.slice(-18);
-    const s=$("#spark"); if (s) drawLine(s, k, v, "Senaste 18 månader (volym)");
-  }
-
   function wire(){
     const gm=$("#geoMode");
     if (gm) gm.addEventListener("change", ()=>setTimeout(drawAll,0));
@@ -458,7 +606,9 @@
     });
 
     window.addEventListener("resize", ()=>{
-      drawSpark(); drawAll(); drawOIAT();
+      drawAll();
+      drawSparkMulti();
+      drawOIAT();
     });
   }
 
@@ -466,12 +616,16 @@
   // Init
   // =========================
   document.addEventListener("DOMContentLoaded", ()=>{
-    // snabb sanity logg så du ser att flera kategorier finns:
     console.log("[charts] events:", RAW.length, "kategorier:", uniq(RAW.map(e=>e.cat)));
 
     buildKPIs();
     renderCatChips();
+
+    // Översikt: multi-serie + legend + select all/none
+    renderSparkLegend();
+    drawSparkMulti();
+
     wire();
-    setTimeout(()=>{ drawSpark(); drawAll(); drawOIAT(); }, 120);
+    setTimeout(()=>{ drawAll(); drawOIAT(); }, 120);
   });
 })();
