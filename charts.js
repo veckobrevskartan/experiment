@@ -1,9 +1,41 @@
 // charts.js
 (function () {
   const $ = (sel) => document.querySelector(sel);
-  const RAW = (window.events || []).slice();
 
-  // Expandera: CSS overlay (funkar alltid)
+  // =========================
+  // KATEGORIER (från din karta)
+  // =========================
+  const CAT_ALIASES = {
+    DRONE:['uav','drönare','drone','quad','fpv'],
+    INFRA:['sabotage','infrastruktur','el','fiber','kabel','bro','tunnel'],
+    NUCLEAR:['kärn','nuclear','radioaktiv','uran','strål'],
+    TERROR:['terror','attack','spräng','bomb'],
+    INTEL:['spion','underrätt','säpo','intel','kgb','gru','fsb'],
+    LEGAL:['dom','åtal','rättsfall','rättegång'],
+    MIL:['militär','försvar','brigad','regemente','övning'],
+    HYBRID:['påverkan','hybrid','desinfo','psyop','reflexiv'],
+    MAR:['marin','sjöfart','tanker','hamn','fartyg','ais'],
+    GPS:['gps','gnss','jamming','störning','spoof'],
+    POLICY:['politik','policy','myndighet','lag','förordning']
+  };
+
+  const CATS = {
+    DRONE:   { label:'Drönare / UAV',             emoji:'🛩️' },
+    INFRA:   { label:'Infrastruktur / sabotage',  emoji:'⚡'  },
+    NUCLEAR: { label:'Kärnenergi / farligt gods', emoji:'☢️' },
+    TERROR:  { label:'Terror / våld',             emoji:'💣' },
+    INTEL:   { label:'Spionage / underrättelse',  emoji:'🕵️‍♂️' },
+    LEGAL:   { label:'Rättsfall / domar',         emoji:'⚖️' },
+    MIL:     { label:'Militär / försvar',         emoji:'🪖' },
+    HYBRID:  { label:'Påverkan / hybrid',         emoji:'🧠' },
+    MAR:     { label:'Maritimt / skuggflotta',    emoji:'⚓' },
+    GPS:     { label:'GPS-störning / signal',     emoji:'📡' },
+    POLICY:  { label:'Politik / policy',          emoji:'🏛️' }
+  };
+
+  // =========================
+  // Expandera via CSS overlay
+  // =========================
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-expand]");
     if (!btn) return;
@@ -16,13 +48,13 @@
     btn.textContent = open ? "Stäng" : "Expandera";
 
     if (open) card.scrollIntoView({ behavior: "smooth", block: "start" });
-
-    // tvinga redraw
     setTimeout(() => window.dispatchEvent(new Event("resize")), 50);
   }, true);
 
-  // helpers
-  function safeStr(x, fallback = "Okänt") {
+  // =========================
+  // Helpers
+  // =========================
+  function safeStr(x, fallback = "") {
     const s = (x ?? "").toString().trim();
     return s ? s : fallback;
   }
@@ -34,7 +66,50 @@
     return Array.from(new Set(arr)).filter(Boolean);
   }
 
-  // canvas sizing
+  // Canonical category:
+  // - trim/uppercase
+  // - om saknas / okänd: försök hitta via alias i title+summary+place
+  function canonicalCat(ev) {
+    let c = safeStr(ev.cat || ev.category || "").trim().toUpperCase();
+
+    if (c && CATS[c]) return c;
+
+    const blob = [
+      safeStr(ev.title),
+      safeStr(ev.summary),
+      safeStr(ev.place),
+      safeStr(ev.country),
+    ].join(" ").toLowerCase();
+
+    for (const [key, words] of Object.entries(CAT_ALIASES)) {
+      if (words.some(w => blob.includes(w))) return key;
+    }
+    return c || "POLICY"; // fallback (byt till "OKÄND" om du vill)
+  }
+
+  function normalizeEvents(input) {
+    const arr = Array.isArray(input) ? input : [];
+    return arr.map((e, i) => {
+      const cat = canonicalCat(e);
+      return {
+        id: e.id ?? i,
+        ...e,
+        cat,
+        category: cat,
+        date: safeStr(e.date),
+        country: safeStr(e.country, "Okänt"),
+        place: safeStr(e.place, "Okänd plats"),
+        title: safeStr(e.title, "(utan titel)"),
+        summary: safeStr(e.summary, ""),
+      };
+    });
+  }
+
+  const RAW = normalizeEvents(window.events || window.rawEvents || []);
+
+  // =========================
+  // Canvas sizing
+  // =========================
   function resizeCanvas(canvas) {
     const dpr = window.devicePixelRatio || 1;
     const rect = canvas.getBoundingClientRect();
@@ -54,27 +129,91 @@
     return { ctx, w, h };
   }
 
+  // =========================
   // KPI
+  // =========================
   function buildKPIs() {
     const n = RAW.length;
-    const cats = uniq(RAW.map(e => safeStr(e.category).toUpperCase())).length;
+    const cats = uniq(RAW.map(e => e.cat)).length;
     const months = uniq(RAW.map(e => monthKey(e.date))).filter(m => m !== "Okänd").length;
-    const countries = uniq(RAW.map(e => safeStr(e.country))).length;
+    const countries = uniq(RAW.map(e => e.country)).length;
 
-    $("#kpis").innerHTML = `
-      <div class="kpi"><div class="n">${n}</div><div class="l">Händelser</div></div>
-      <div class="kpi"><div class="n">${cats}</div><div class="l">Kategorier</div></div>
-      <div class="kpi"><div class="n">${months}</div><div class="l">Månader</div></div>
-      <div class="kpi"><div class="n">${countries}</div><div class="l">Länder</div></div>
-    `;
+    const k = $("#kpis");
+    if (k) {
+      k.innerHTML = `
+        <div class="kpi"><div class="n">${n}</div><div class="l">Händelser</div></div>
+        <div class="kpi"><div class="n">${cats}</div><div class="l">Kategorier</div></div>
+        <div class="kpi"><div class="n">${months}</div><div class="l">Månader</div></div>
+        <div class="kpi"><div class="n">${countries}</div><div class="l">Länder</div></div>
+      `;
+    }
 
     const ds = RAW.map(e => e.date).filter(Boolean).sort();
     const minD = ds[0] ? ds[0].slice(0,10) : "–";
     const maxD = ds[ds.length - 1] ? ds[ds.length - 1].slice(0,10) : "–";
-    $("#dataRange").textContent = `Tidsintervall i data: ${minD} → ${maxD}`;
+    const r = $("#dataRange");
+    if (r) r.textContent = `Tidsintervall i data: ${minD} → ${maxD}`;
   }
 
-  // computations
+  // =========================
+  // Category chips (multi-select)
+  // =========================
+  const activeCats = new Set(Object.keys(CATS)); // start: alla
+  function countByCat(list) {
+    const m = new Map();
+    list.forEach(e => m.set(e.cat, (m.get(e.cat) || 0) + 1));
+    return m;
+  }
+
+  function renderCatChips() {
+    const el = $("#catChips");
+    if (!el) return;
+
+    const counts = countByCat(RAW);
+    const keys = Object.keys(CATS);
+
+    el.innerHTML = keys.map(k => {
+      const meta = CATS[k];
+      const on = activeCats.has(k);
+      const n = counts.get(k) || 0;
+      return `
+        <button class="chip" type="button" data-cat="${k}" aria-pressed="${on}">
+          <span>${meta.emoji}</span>
+          <span>${meta.label}</span>
+          <span class="count">${n}</span>
+        </button>
+      `;
+    }).join("");
+
+    el.querySelectorAll(".chip").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const k = btn.getAttribute("data-cat");
+        if (!k) return;
+
+        // toggla
+        if (activeCats.has(k)) activeCats.delete(k);
+        else activeCats.add(k);
+
+        // om man råkar slå av alla: slå på alla igen
+        if (activeCats.size === 0) {
+          Object.keys(CATS).forEach(x => activeCats.add(x));
+        }
+
+        renderCatChips();
+        drawAll();
+        drawSpark();
+        drawOIAT();
+      });
+    });
+  }
+
+  function filtered() {
+    return RAW.filter(e => activeCats.has(e.cat));
+  }
+
+  // =========================
+  // Aggregation
+  // =========================
   function monthlyCounts(list) {
     const map = new Map();
     for (const e of list) {
@@ -88,17 +227,18 @@
 
   function categoryCounts(list) {
     const m = new Map();
-    list.forEach(e => {
-      const c = safeStr(e.category, "OKÄND").toUpperCase();
-      m.set(c, (m.get(c)||0) + 1);
-    });
-    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0,10);
-    return { labels: arr.map(x=>x[0]), values: arr.map(x=>x[1]) };
+    list.forEach(e => m.set(e.cat, (m.get(e.cat)||0) + 1));
+    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0, 10);
+    // map label
+    return {
+      labels: arr.map(([k]) => `${CATS[k]?.emoji || ""} ${k}`.trim()),
+      values: arr.map(([,v]) => v)
+    };
   }
 
   function heat(list) {
     const months = uniq(list.map(e => monthKey(e.date))).filter(m=>m!=="Okänd").sort();
-    const cats = uniq(list.map(e => safeStr(e.category).toUpperCase())).sort();
+    const cats = Object.keys(CATS); // visa alltid i samma ordning
 
     const mi = new Map(months.map((m,i)=>[m,i]));
     const ci = new Map(cats.map((c,i)=>[c,i]));
@@ -106,7 +246,7 @@
 
     list.forEach(e => {
       const m = monthKey(e.date);
-      const c = safeStr(e.category).toUpperCase();
+      const c = e.cat;
       if (!mi.has(m) || !ci.has(c)) return;
       matrix[ci.get(c)][mi.get(m)] += 1;
     });
@@ -117,14 +257,16 @@
   function geoTop(list, mode) {
     const m = new Map();
     list.forEach(e => {
-      const key = mode === "place" ? safeStr(e.place) : safeStr(e.country);
+      const key = mode === "place" ? e.place : e.country;
       m.set(key, (m.get(key)||0) + 1);
     });
-    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0,12);
+    const arr = Array.from(m.entries()).sort((a,b)=>b[1]-a[1]).slice(0, 12);
     return { labels: arr.map(x=>x[0]), values: arr.map(x=>x[1]) };
   }
 
-  // drawing
+  // =========================
+  // Drawing
+  // =========================
   function drawLine(canvas, labels, values, title) {
     const { ctx, w, h } = clear(canvas);
     const padL=54, padR=14, padT=36, padB=30;
@@ -163,7 +305,7 @@
 
   function drawBars(canvas, labels, values, title) {
     const { ctx, w, h } = clear(canvas);
-    const padL=160, top=36;
+    const padL=180, top=36;
     const maxV = Math.max(1, ...values);
 
     ctx.fillStyle="#0f172a";
@@ -193,7 +335,7 @@
 
   function drawHeat(canvas, months, cats, matrix, title) {
     const { ctx, w, h } = clear(canvas);
-    const padL=100, padT=40, padR=14, padB=46;
+    const padL=140, padT=40, padR=14, padB=46;
     const cw = w - padL - padR;
     const ch = h - padT - padB;
     const cellW = cw/Math.max(1,months.length);
@@ -209,7 +351,7 @@
     for (let r=0;r<cats.length;r++){
       for (let c=0;c<months.length;c++){
         const v = matrix[r][c]||0;
-        const a = 0.06 + (v/maxV)*0.7;
+        const a = 0.05 + (v/maxV)*0.75;
         ctx.fillStyle = `rgba(37,99,235,${a})`;
         ctx.fillRect(padL+c*cellW, padT+r*cellH, cellW, cellH);
         ctx.strokeStyle="rgba(15,23,42,0.06)";
@@ -227,20 +369,32 @@
       ctx.fillText(months[i],0,0);
       ctx.restore();
     }
-    const rstep = Math.max(1, Math.floor(cats.length/10));
-    for (let i=0;i<cats.length;i+=rstep){
-      ctx.fillText(cats[i], 12, padT+i*cellH+14);
+
+    // rader: visa emoji+label
+    for (let i=0;i<cats.length;i++){
+      const k = cats[i];
+      const meta = CATS[k];
+      const label = `${meta?.emoji || ""} ${meta?.label || k}`.trim();
+      ctx.fillText(label, 12, padT+i*cellH+14);
     }
   }
 
+  // =========================
   // OIAT chart
+  // =========================
   function drawOIAT(){
-    const O = +$("#sO").value, I = +$("#sI").value, A = +$("#sA").value, T = +$("#sT").value;
-    $("#vO").textContent = O; $("#vI").textContent = I; $("#vA").textContent = A; $("#vT").textContent = T;
+    const sO=$("#sO"), sI=$("#sI"), sA=$("#sA"), sT=$("#sT");
+    const vO=$("#vO"), vI=$("#vI"), vA=$("#vA"), vT=$("#vT");
+    const canvas=$("#oiatChart");
+    if (!sO||!sI||!sA||!sT||!vO||!vI||!vA||!vT||!canvas) return;
 
-    const labels = ["Objektivitet","Integritet","Aktualitet","Täckning"];
-    const vals = [O,I,A,T];
-    const { ctx, w, h } = clear($("#oiatChart"));
+    const O=+sO.value, I=+sI.value, A=+sA.value, T=+sT.value;
+    vO.textContent=O; vI.textContent=I; vA.textContent=A; vT.textContent=T;
+
+    const labels=["Objektivitet","Integritet","Aktualitet","Täckning"];
+    const vals=[O,I,A,T];
+    const { ctx, w } = clear(canvas);
+
     const padL=160, top=36, barH=18, gap=14;
 
     ctx.fillStyle="#0f172a";
@@ -264,68 +418,59 @@
     });
   }
 
-  // filters + draw
-  function fillFilters(){
-    const sel = $("#catFilter");
-    sel.innerHTML = "";
-    const cats = uniq(RAW.map(e=>safeStr(e.category).toUpperCase())).sort();
-
-    const all = document.createElement("option");
-    all.value="ALL"; all.textContent="Alla";
-    sel.appendChild(all);
-
-    cats.forEach(c=>{
-      const o=document.createElement("option");
-      o.value=c; o.textContent=c;
-      sel.appendChild(o);
-    });
-  }
-
-  function filtered(){
-    const v = $("#catFilter").value;
-    if (v==="ALL") return RAW;
-    return RAW.filter(e=>safeStr(e.category).toUpperCase()===v);
-  }
-
+  // =========================
+  // Draw all
+  // =========================
   function drawAll(){
     const list = filtered();
 
     const cc = categoryCounts(list);
-    drawBars($("#catChart"), cc.labels, cc.values, "Händelser per kategori");
+    const c1=$("#catChart"); if (c1) drawBars(c1, cc.labels, cc.values, "Händelser per kategori");
 
     const t = monthlyCounts(list);
     const lastK = t.keys.slice(-36);
     const lastV = t.vals.slice(-36);
-    drawLine($("#timeChart"), lastK, lastV, "Per månad");
+    const c2=$("#timeChart"); if (c2) drawLine(c2, lastK, lastV, "Per månad");
 
     const hm = heat(list);
-    drawHeat($("#heatChart"), hm.months, hm.cats, hm.matrix, "Kategori × månad");
+    const c3=$("#heatChart"); if (c3) drawHeat(c3, hm.months, hm.cats, hm.matrix, "Kategori × månad");
 
-    const g = geoTop(list, $("#geoMode").value);
-    drawBars($("#geoChart"), g.labels, g.values, $("#geoMode").value==="place" ? "Topplista – plats" : "Topplista – land");
+    const modeSel=$("#geoMode");
+    const mode = modeSel ? modeSel.value : "country";
+    const g = geoTop(list, mode);
+    const c4=$("#geoChart"); if (c4) drawBars(c4, g.labels, g.values, mode==="place" ? "Topplista – plats" : "Topplista – land");
   }
 
   function drawSpark(){
-    const t = monthlyCounts(RAW);
+    const t = monthlyCounts(filtered());
     const k = t.keys.slice(-18);
     const v = t.vals.slice(-18);
-    drawLine($("#spark"), k, v, "Senaste 18 månader (volym)");
+    const s=$("#spark"); if (s) drawLine(s, k, v, "Senaste 18 månader (volym)");
   }
 
   function wire(){
-    $("#catFilter").addEventListener("change", ()=>setTimeout(drawAll,0));
-    $("#geoMode").addEventListener("change", ()=>setTimeout(drawAll,0));
-    ["sO","sI","sA","sT"].forEach(id => $("#"+id).addEventListener("input", ()=>setTimeout(drawOIAT,0)));
+    const gm=$("#geoMode");
+    if (gm) gm.addEventListener("change", ()=>setTimeout(drawAll,0));
+
+    ["sO","sI","sA","sT"].forEach(id=>{
+      const el=$("#"+id);
+      if (el) el.addEventListener("input", ()=>setTimeout(drawOIAT,0));
+    });
 
     window.addEventListener("resize", ()=>{
       drawSpark(); drawAll(); drawOIAT();
     });
   }
 
-  // init
+  // =========================
+  // Init
+  // =========================
   document.addEventListener("DOMContentLoaded", ()=>{
+    // snabb sanity logg så du ser att flera kategorier finns:
+    console.log("[charts] events:", RAW.length, "kategorier:", uniq(RAW.map(e=>e.cat)));
+
     buildKPIs();
-    fillFilters();
+    renderCatChips();
     wire();
     setTimeout(()=>{ drawSpark(); drawAll(); drawOIAT(); }, 120);
   });
