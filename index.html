@@ -147,64 +147,76 @@
       </div>
     </section>
 
-    <!-- OIAT -->
-    <section class="card" id="oiat">
-      <div class="card-head">
-        <div>
-          <h2>OIAT – kvalitetskriterier</h2>
-          <p class="muted">Objektivitet • Integritet • Aktualitet • Täckning</p>
-        </div>
-        <div class="actions">
-          <button class="btn" type="button" data-expand="#oiat">Expandera</button>
-        </div>
+   <!-- OIAT -->
+<section class="card" id="oiat">
+  <div class="card-head">
+    <div>
+      <h2>OIAT – kvalitetskriterier</h2>
+      <p class="muted">Objektivitet • Integritet • Aktualitet • Täckning</p>
+    </div>
+    <div class="actions">
+      <button class="btn" type="button" data-expand="#oiat">Expandera</button>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <!-- VÄNSTER: Förklaring + BILD -->
+    <div class="box">
+      <div class="box-title">OIAT-modellen (översikt + källtyper)</div>
+
+      <p class="muted" style="margin:0 0 10px;">
+        OIAT används för att kvalitetssäkra källor och underlag innan de blir analys, varning eller rapportprodukt.
+        Modellen hjälper dig att skilja observation från tolkning, bedöma spårbarhet, kontrollera aktualitet och se om
+        underlaget har tillräcklig täckning.
+      </p>
+
+      <!-- OBS: filen måste ligga i samma mapp som index.html och heta exakt oiat-modellen.png -->
+      <img
+        src="oiat-modellen.png"
+        alt="OIAT-modellen: källtyper och kvalitetssäkring"
+        style="width:100%; height:auto; display:block; border-radius:12px; border:1px solid var(--line); background:#fff;"
+      />
+
+      <div class="note" style="margin-top:10px;">
+        <b>Poängskala (0–5):</b> 0=Otjänlig/okänd, 1=Mycket svag, 2=Svag, 3=Godtagbar, 4=Stark, 5=Mycket stark.<br/>
+        <b>RAG-trösklar:</b> Röd (&lt; 2,5) • Gul (2,5–3,5) • Grön (≥ 3,5)
       </div>
 
-      <div class="grid2">
-        <!-- NY: Förklaring + bild + uträknat OIAT-score + RAG -->
-        <div class="box">
-          <div class="box-title">OIAT-modellen (vad den betyder i praktiken)</div>
-
-          <p class="muted" style="margin:0 0 10px;">
-            OIAT används för att kvalitetssäkra källor och underlag innan de blir analys, varning eller rapportprodukt.
-            Modellen hjälper dig att skilja observation från tolkning, bedöma spårbarhet, kontrollera aktualitet och se om
-            underlaget har tillräcklig täckning.
-          </p>
-
-          <!-- Lägg din OIAT-bild i repot med exakt filnamn nedan -->
-          <img class="svg" src="oiat-modellen.png" alt="OIAT-modellen: källtyper och kvalitetssäkring" />
-
-          <div class="note" style="margin-top:10px;">
-            <b>Poängskala (0–5):</b> 0=Otjänlig/okänd, 1=Mycket svag, 2=Svag, 3=Godtagbar, 4=Stark, 5=Mycket stark.
-            <br/>
-            <b>RAG-trösklar:</b> Röd (&lt; 2,5) = otillräckligt, Gul (2,5–3,5) = användbar men komplettera, Grön (≥ 3,5) = robust underlag.
-          </div>
-
-          <div class="oiat-scoreline">
-            <span class="pill"><b>OIAT-score:</b> <span id="oiatScore">–</span>/5</span>
-            <span class="badge" id="oiatRag">–</span>
-          </div>
-
-          <div class="note">
-            <b>Så använder du OIAT snabbt:</b><br/>
-            O (Objektivitet): Är detta observation eller tolkning? Finns bias?<br/>
-            I (Integritet): Kan jag spåra tillbaka till ursprung? Har något manipulerats?<br/>
-            A (Aktualitet): När hände det? När publicerades det? Är det fortfarande relevant?<br/>
-            T (Täckning): Har jag fler källtyper/perspektiv? Saknas geografier/aktörer/tidslinje?
-          </div>
-        </div>
-
-        <div class="box">
-          <div class="box-title">OIAT-poäng (interaktivt)</div>
-          <div class="sliders">
-            <label>Objektivitet <span id="vO">4</span><input id="sO" type="range" min="0" max="5" value="4"></label>
-            <label>Integritet <span id="vI">4</span><input id="sI" type="range" min="0" max="5" value="4"></label>
-            <label>Aktualitet <span id="vA">3</span><input id="sA" type="range" min="0" max="5" value="3"></label>
-            <label>Täckning <span id="vT">3</span><input id="sT" type="range" min="0" max="5" value="3"></label>
-          </div>
-          <canvas id="oiatChart" class="canvas" height="260"></canvas>
-        </div>
+      <div class="oiat-scoreline" style="margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+        <span class="pill"><b>OIAT-score:</b> <span id="oiatScore">–</span>/5</span>
+        <span class="badge" id="oiatRag">–</span>
       </div>
-    </section>
+
+      <div class="note" style="margin-top:10px;">
+        <b>Snabb check:</b><br/>
+        O: Är detta observation eller tolkning? Finns bias?<br/>
+        I: Kan jag spåra tillbaka till ursprung? Har något manipulerats?<br/>
+        A: När hände det? När publicerades det? Är det fortfarande relevant?<br/>
+        T: Har jag fler källtyper/perspektiv? Saknas aktörer/geografi/tidslinje?
+      </div>
+    </div>
+
+    <!-- HÖGER: Reglage + tydliga värden (utan extra “inramad” poängruta/canvas) -->
+    <div class="box">
+      <div class="box-title">OIAT-poäng (interaktivt)</div>
+
+      <div class="sliders">
+        <label>Objektivitet <span id="vO">4</span><input id="sO" type="range" min="0" max="5" value="4"></label>
+        <label>Integritet <span id="vI">4</span><input id="sI" type="range" min="0" max="5" value="4"></label>
+        <label>Aktualitet <span id="vA">3</span><input id="sA" type="range" min="0" max="5" value="3"></label>
+        <label>Täckning <span id="vT">3</span><input id="sT" type="range" min="0" max="5" value="3"></label>
+      </div>
+
+      <div class="note">
+        <b>Uträknat värde:</b> <span id="oiatScoreInline">–</span>/5 • <span id="oiatRagInline">–</span>
+      </div>
+
+      <div class="note" style="margin-top:10px;">
+        Tips: Använd låg poäng som “inhämtningssignal” – höj score genom bättre spårbarhet, fler källtyper och bättre tidslinje.
+      </div>
+    </div>
+  </div>
+</section>
 
     <!-- KÄNDA/OKÄNDA -->
     <section class="card" id="known">
