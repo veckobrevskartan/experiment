@@ -628,4 +628,106 @@
     wire();
     setTimeout(()=>{ drawAll(); drawOIAT(); }, 120);
   });
+  // ===== OIAT: reglage -> score + RAG + helskärm-bild =====
+(function initOIAT(){
+  const $ = (id) => document.getElementById(id);
+
+  const sO = $("sO"), sI = $("sI"), sA = $("sA"), sT = $("sT");
+  const vO = $("vO"), vI = $("vI"), vA = $("vA"), vT = $("vT");
+
+  const outScoreRight = $("oiatScore");
+  const outRagRight   = $("oiatRag");
+  const outScoreLeft  = $("oiatScoreInline");
+  const outRagLeft    = $("oiatRagInline");
+
+  // Om något saknas: gör inget (förhindrar att resten av charts.js kraschar)
+  if(!sO || !sI || !sA || !sT || !vO || !vI || !vA || !vT){
+    console.warn("OIAT: saknar reglage/labels i DOM.");
+    return;
+  }
+
+  function ragFromScore(score){
+    if(score < 2.5) return { key:"RÖD",  text:"RÖD – otillräckligt" };
+    if(score < 3.5) return { key:"GUL",  text:"GUL – komplettera" };
+    return             { key:"GRÖN", text:"GRÖN – robust" };
+  }
+
+  function setBadge(el, rag){
+    if(!el) return;
+    el.textContent = rag.text;
+    // enkel färgkodning utan nya CSS-krav
+    el.style.padding = "6px 10px";
+    el.style.borderRadius = "999px";
+    el.style.border = "1px solid var(--line)";
+    el.style.background = "#f8fafc";
+    if(rag.key === "RÖD") el.style.background = "rgba(239,68,68,.12)";
+    if(rag.key === "GUL") el.style.background = "rgba(245,158,11,.14)";
+    if(rag.key === "GRÖN") el.style.background = "rgba(34,197,94,.14)";
+  }
+
+  function update(){
+    const O = Number(sO.value);
+    const I = Number(sI.value);
+    const A = Number(sA.value);
+    const T = Number(sT.value);
+
+    vO.textContent = O;
+    vI.textContent = I;
+    vA.textContent = A;
+    vT.textContent = T;
+
+    const score = (O + I + A + T) / 4;
+    const scoreTxt = score.toFixed(2);
+
+    const rag = ragFromScore(score);
+
+    if(outScoreRight) outScoreRight.textContent = scoreTxt;
+    if(outScoreLeft)  outScoreLeft.textContent  = scoreTxt;
+
+    setBadge(outRagRight, rag);
+    if(outRagLeft) outRagLeft.textContent = rag.text;
+  }
+
+  ["input","change"].forEach(evt=>{
+    sO.addEventListener(evt, update);
+    sI.addEventListener(evt, update);
+    sA.addEventListener(evt, update);
+    sT.addEventListener(evt, update);
+  });
+
+  update(); // initial beräkning
+
+  // Helsskärm/lightbox för bilden
+  const fullBtn = $("oiatFullBtn");
+  const lb = $("oiatLightbox");
+  const closeBtn = $("oiatCloseBtn");
+
+  function openLB(){
+    if(!lb) return;
+    lb.classList.add("open");
+    lb.setAttribute("aria-hidden","false");
+    document.body.style.overflow = "hidden";
+  }
+  function closeLB(){
+    if(!lb) return;
+    lb.classList.remove("open");
+    lb.setAttribute("aria-hidden","true");
+    document.body.style.overflow = "";
+  }
+
+  if(fullBtn && lb){
+    fullBtn.addEventListener("click", openLB);
+  }
+  if(closeBtn && lb){
+    closeBtn.addEventListener("click", closeLB);
+  }
+  // klick utanför panel stänger
+  if(lb){
+    lb.addEventListener("click", (e)=>{
+      if(e.target === lb) closeLB();
+    });
+    document.addEventListener("keydown", (e)=>{
+      if(e.key === "Escape" && lb.classList.contains("open")) closeLB();
+    });
+  }
 })();
