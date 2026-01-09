@@ -25,21 +25,21 @@ body{
   border-bottom:1px solid var(--line);
 }
 
+/* Gör headern kompakt */
 .brand{
   max-width:1100px;
   margin:0 auto;
   display:flex;
   align-items:center;
-  padding:6px 18px;   /* ↓ kraftigt minskad höjd */
+  padding:2px 12px;     /* <-- viktigast: minskar höjden */
 }
 
-
+/* Begränsa loggans höjd hårt */
 .logo{
-  max-height:64px;   /* justera 56–72 vid behov */
+  height:40px;          /* testa 32–48px */
   width:auto;
-  height:auto;
-  object-fit:contain;
   display:block;
+  object-fit:contain;
 }
 {
   margin:0;
