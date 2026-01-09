@@ -273,3 +273,54 @@ select{
 .card.expanded .frame iframe{
   height: 90vh;
 }
+/* OIAT-bild: klicka/knapp för helskärm */
+.oiat-figure{
+  position: relative;
+}
+.oiat-figure .btn-full{
+  position:absolute;
+  top:10px;
+  right:10px;
+  z-index:3;
+}
+
+/* Enkel “lightbox” för helskärm */
+.lightbox{
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding: 18px;
+  background: rgba(15,23,42,.82);
+}
+.lightbox.open{ display:flex; }
+.lightbox .panel{
+  width: min(1200px, 96vw);
+  max-height: 92vh;
+  background: #fff;
+  border-radius: 16px;
+  overflow:hidden;
+  border:1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+.lightbox .panel-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border-bottom:1px solid var(--line);
+}
+.lightbox .panel-body{
+  padding: 12px;
+  overflow:auto;
+  max-height: calc(92vh - 54px);
+}
+.lightbox img{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
