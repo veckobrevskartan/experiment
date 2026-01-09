@@ -4,21 +4,7 @@
   const $  = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  // Låsta kategorier (dina)
-  const CATS = {
-    HYBRID:  { label:'HYBRID',  emoji:'🧠' },
-    NUCLEAR: { label:'NUCLEAR', emoji:'☢️' },
-    DRONE:   { label:'DRONE',   emoji:'🛩️' },
-    INFRA:   { label:'INFRA',   emoji:'⚡'  },
-    MIL:     { label:'MIL',     emoji:'🪖' },
-    INTEL:   { label:'INTEL',   emoji:'🕵️' },
-    TERROR:  { label:'TERROR',  emoji:'💣' },
-    POLICY:  { label:'POLICY',  emoji:'🏛️' },
-    LEGAL:   { label:'LEGAL',   emoji:'⚖️' },
-    MAR:     { label:'MAR',     emoji:'⚓' },
-    GPS:     { label:'GPS',     emoji:'📡' }
-  };
-
+  // ===== Helpers =====
   const pad2 = (n) => String(n).padStart(2, "0");
 
   function parseISODate(s) {
@@ -30,687 +16,217 @@
     return isNaN(dt.getTime()) ? null : dt;
   }
 
-  function monthKey(dt) {
-    return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}`;
+  function fmtDate(dt) {
+    return `${dt.getUTCFullYear()}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
   }
 
   function uniq(arr) {
     return Array.from(new Set(arr));
   }
 
-  function normalizeEvents(raw) {
-    const out = [];
-    for (const e of (Array.isArray(raw) ? raw : [])) {
-      // stöd både "cat" och "category"
-      const dt = parseISODate(e?.date);
-      if (!dt) continue;
-
-      const catRaw = String(e?.cat ?? e?.category ?? "").trim().toUpperCase();
-      const cat = CATS[catRaw] ? catRaw : "POLICY";
-
-      out.push({
-        dt,
-        date: e.date,
-        month: monthKey(dt),
-        cat,
-        country: (e.country || "").toString().trim(),
-        place: (e.place || "").toString().trim(),
-        title: (e.title || "").toString(),
-        url: (e.url || "").toString()
-      });
-    }
-    out.sort((a, b) => a.dt - b.dt);
-    return out;
+  function safeNum(n, fallback = 0) {
+    const x = Number(n);
+    return Number.isFinite(x) ? x : fallback;
   }
 
-  // =========================
-  // Canvas helpers
-  // =========================
-  function setupCanvas(canvas) {
-    const ctx = canvas.getContext("2d");
-    const dpr = Math.max(1, window.devicePixelRatio || 1);
+  // ===== Dataset =====
+  const events = Array.isArray(window.events) ? window.events : [];
 
-    const rect = canvas.getBoundingClientRect();
-    const cssW = Math.max(1, rect.width);
-    const cssH = Math.max(1, rect.height || canvas.height || 300);
+  // ===== KPI + Data range =====
+  function buildKpis() {
+    const elKpis = $("#kpis");
+    const elRange = $("#dataRange");
+    if (!elKpis || !elRange) return;
 
-    canvas.width  = Math.round(cssW * dpr);
-    canvas.height = Math.round(cssH * dpr);
+    const dates = events
+      .map(e => parseISODate(e.date))
+      .filter(Boolean)
+      .sort((a,b) => a - b);
 
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, cssW, cssH);
-    return { ctx, w: cssW, h: cssH };
-  }
+    const minDate = dates.length ? dates[0] : null;
+    const maxDate = dates.length ? dates[dates.length - 1] : null;
 
-  function drawEmpty(canvas, title, subtitle) {
-    const { ctx, w, h } = setupCanvas(canvas);
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(title || "Ingen data", 12, 22);
-    ctx.fillStyle = "#64748b";
-    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText(subtitle || "Kontrollera att data.js laddas och innehåller poster.", 12, 44);
-  }
+    const total = events.length;
 
-  function niceMax(v) {
-    if (v <= 0) return 1;
-    const pow = Math.pow(10, Math.floor(Math.log10(v)));
-    const n = v / pow;
-    let m = 1;
-    if (n <= 1) m = 1;
-    else if (n <= 2) m = 2;
-    else if (n <= 5) m = 5;
-    else m = 10;
-    return m * pow;
-  }
+    const cats = uniq(events.map(e => e.cat).filter(Boolean));
+    const countries = uniq(events.map(e => e.country).filter(Boolean));
+    const places = uniq(events.map(e => e.place).filter(Boolean));
 
-  function yTicks(maxV, ticks = 4) {
-    const m = niceMax(maxV);
-    const step = m / ticks;
-    const arr = [];
-    for (let i = 0; i <= ticks; i++) arr.push(step * i);
-    return { max: m, ticks: arr };
-  }
+    const items = [
+      { label: "Händelser", value: total },
+      { label: "Kategorier", value: cats.length },
+      { label: "Länder", value: countries.length },
+      { label: "Platser", value: places.length },
+    ];
 
-  // =========================
-  // Aggregation
-  // =========================
-  function buildAgg(events) {
-    const months = uniq(events.map(e => e.month)).sort();
-    const cats = Object.keys(CATS);
+    elKpis.innerHTML = items.map(it => `
+      <div class="kpi">
+        <div class="kpi-label">${it.label}</div>
+        <div class="kpi-value">${it.value}</div>
+      </div>
+    `).join("");
 
-    const totalByMonth = new Map(months.map(m => [m, 0]));
-    const totalByCat = new Map(cats.map(c => [c, 0]));
-    const byCatMonth = new Map(cats.map(c => [c, new Map(months.map(m => [m, 0]))]));
-
-    for (const e of events) {
-      totalByMonth.set(e.month, (totalByMonth.get(e.month) || 0) + 1);
-      totalByCat.set(e.cat, (totalByCat.get(e.cat) || 0) + 1);
-      const mm = byCatMonth.get(e.cat);
-      if (mm) mm.set(e.month, (mm.get(e.month) || 0) + 1);
-    }
-
-    return { months, totalByMonth, totalByCat, byCatMonth };
-  }
-
-  // =========================
-  // KPI
-  // =========================
-  function renderKPIs(events, aggAll) {
-    const host = $("#kpis");
-    const range = $("#dataRange");
-    const catsUsed = uniq(events.map(e => e.cat)).length;
-    const countries = uniq(events.map(e => e.country).filter(Boolean)).length;
-
-    if (host) {
-      host.innerHTML = "";
-      const items = [
-        { n: events.length, l: "Händelser" },
-        { n: catsUsed, l: "Kategorier" },
-        { n: aggAll.months.length, l: "Månader" },
-        { n: countries, l: "Länder" }
-      ];
-      for (const it of items) {
-        const d = document.createElement("div");
-        d.className = "kpi";
-        d.innerHTML = `<div class="n">${it.n}</div><div class="l">${it.l}</div>`;
-        host.appendChild(d);
-      }
-    }
-
-    if (range) {
-      range.textContent = events.length
-        ? `Tidsintervall i data: ${events[0].date} – ${events[events.length - 1].date}`
-        : "Tidsintervall i data: –";
-    }
-
-    const elCats = $("#catsUsed");
-    const elTot = $("#eventsTotal");
-    if (elCats) elCats.textContent = String(catsUsed);
-    if (elTot) elTot.textContent = String(events.length);
-  }
-
-  // =========================
-  // Chips (legend & filter)
-  // =========================
-  function chipHTML(cat, count) {
-    const meta = CATS[cat];
-    return `
-      <span>${meta.emoji}</span>
-      <span>${meta.label}</span>
-      <span class="count">${count}</span>
-    `;
-  }
-
-  function renderChips(hostSel, aggAll, stateSet, onToggle) {
-    const host = $(hostSel);
-    if (!host) return;
-    host.innerHTML = "";
-
-    for (const cat of Object.keys(CATS)) {
-      const count = aggAll.totalByCat.get(cat) || 0;
-
-      const btn = document.createElement("button");
-      btn.type = "button";
-      btn.className = "chip";
-      btn.dataset.cat = cat;
-      btn.setAttribute("aria-pressed", stateSet.has(cat) ? "true" : "false");
-      btn.innerHTML = chipHTML(cat, count);
-
-      btn.addEventListener("click", () => onToggle(cat));
-      host.appendChild(btn);
+    if (minDate && maxDate) {
+      elRange.textContent = `Data: ${fmtDate(minDate)} → ${fmtDate(maxDate)} (UTC)`;
+    } else {
+      elRange.textContent = `Data: inga datum hittades i datasetet.`;
     }
   }
 
-  // =========================
-  // Overview spark (total + valda kategorier)
-  // =========================
-  function drawSparkMulti(canvasSel, events, aggAll, sparkCats) {
-    const canvas = $(canvasSel);
-    if (!canvas) return;
-
-    if (!events.length || !aggAll.months.length) {
-      drawEmpty(canvas, "Volym över tid", "Ingen data i window.events");
-      return;
-    }
-
-    const { ctx, w, h } = setupCanvas(canvas);
-    const padL = 44, padR = 12, padT = 18, padB = 26;
-    const iw = w - padL - padR;
-    const ih = h - padT - padB;
-
-    const months = aggAll.months;
-    const total = months.map(m => aggAll.totalByMonth.get(m) || 0);
-
-    const series = [];
-    for (const c of Object.keys(CATS)) {
-      if (!sparkCats.has(c)) continue;
-      const mm = aggAll.byCatMonth.get(c);
-      series.push({
-        cat: c,
-        arr: months.map(m => (mm ? (mm.get(m) || 0) : 0))
-      });
-    }
-
-    const maxV = Math.max(1, ...total, ...series.flatMap(s => s.arr));
-    const yt = yTicks(maxV, 4);
-    const stepX = iw / Math.max(1, months.length - 1);
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-
-    // grid
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.lineWidth = 1;
-    ctx.fillStyle = "#64748b";
-    ctx.font = "12px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    for (const v of yt.ticks) {
-      const y = padT + ih - (v / yt.max) * ih;
-      ctx.beginPath();
-      ctx.moveTo(padL, y);
-      ctx.lineTo(padL + iw, y);
-      ctx.stroke();
-      ctx.fillText(String(Math.round(v)), 6, y + 4);
-    }
-
-    // x labels
-    const labelEvery = Math.max(1, Math.floor(months.length / 6));
-    for (let i = 0; i < months.length; i += labelEvery) {
-      const x = padL + i * stepX;
-      ctx.fillText(months[i], x - 18, padT + ih + 18);
-    }
-
-    function drawLine(arr, stroke, width, alpha = 1) {
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      ctx.strokeStyle = stroke;
-      ctx.lineWidth = width;
-      ctx.beginPath();
-      for (let i = 0; i < arr.length; i++) {
-        const x = padL + i * stepX;
-        const y = padT + ih - (arr[i] / yt.max) * ih;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-      }
-      ctx.stroke();
-      ctx.restore();
-    }
-
-    // kategorilinjer (tunna)
-    let idx = 0;
-    for (const s of series) {
-      const hue = (idx * 33) % 360;
-      drawLine(s.arr, `hsla(${hue}, 70%, 45%, 0.85)`, 1.4, 0.9);
-      idx++;
-    }
-
-    // total (tjock)
-    drawLine(total, "rgba(37,99,235,1)", 2.6, 1);
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui, -apple-system, Segoe UI, Roboto, Arial";
-    ctx.fillText("Volym över tid", padL, 14);
+  // ===== OIAT =====
+  function ragFromScore(score) {
+    // score 0..5
+    if (score >= 4.0) return "GRÖN – robust";
+    if (score >= 2.5) return "GUL – rimlig";
+    return "RÖD – bristfällig";
   }
 
-  // =========================
-  // Main charts (filter)
-  // =========================
-  function filterByCats(events, activeCats) {
-    return events.filter(e => activeCats.has(e.cat));
+  function calcOiat(o, i, a, t) {
+    // Enkel medelvärdesmodell (0..5)
+    const score = (o + i + a + t) / 4;
+    return {
+      score,
+      rag: ragFromScore(score)
+    };
   }
 
-  function drawCatBar(canvasSel, eventsFiltered) {
-    const canvas = $(canvasSel);
-    if (!canvas) return;
-
-    if (!eventsFiltered.length) {
-      drawEmpty(canvas, "Fördelning per kategori", "Inga händelser i filtret.");
-      return;
-    }
-
-    const { ctx, w, h } = setupCanvas(canvas);
-    const padL = 210, padR = 14, padT = 18, padB = 16;
-    const iw = w - padL - padR;
-    const ih = h - padT - padB;
-
-    const counts = new Map(Object.keys(CATS).map(c => [c, 0]));
-    for (const e of eventsFiltered) counts.set(e.cat, (counts.get(e.cat) || 0) + 1);
-
-    const items = Array.from(counts.entries()).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]);
-    const maxV = Math.max(1, ...items.map(x => x[1]));
-    const rowH = ih / Math.max(1, items.length);
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui";
-    ctx.fillText("Händelser per kategori", padL, 14);
-
-    ctx.font = "12px system-ui";
-    for (let i = 0; i < items.length; i++) {
-      const [cat, v] = items[i];
-      const y0 = padT + i * rowH + 6;
-      const yText = padT + i * rowH + rowH * 0.68;
-
-      ctx.fillStyle = "#0f172a";
-      ctx.fillText(`${CATS[cat].emoji} ${cat}`, 10, yText);
-
-      const bw = (v / maxV) * iw;
-      ctx.fillStyle = "rgba(37,99,235,.18)";
-      ctx.fillRect(padL, y0, bw, Math.max(10, rowH - 10));
-
-      ctx.fillStyle = "#475569";
-      ctx.fillText(String(v), padL + bw + 8, yText);
-    }
-  }
-
-  function drawTimeLine(canvasSel, eventsFiltered) {
-    const canvas = $(canvasSel);
-    if (!canvas) return;
-
-    if (!eventsFiltered.length) {
-      drawEmpty(canvas, "Volym över tid (månad)", "Inga händelser i filtret.");
-      return;
-    }
-
-    const agg = buildAgg(eventsFiltered);
-    const months = agg.months.slice(-36);
-    const vals = months.map(m => agg.totalByMonth.get(m) || 0);
-
-    const { ctx, w, h } = setupCanvas(canvas);
-    const padL = 46, padR = 12, padT = 18, padB = 28;
-    const iw = w - padL - padR;
-    const ih = h - padT - padB;
-
-    const maxV = Math.max(1, ...vals);
-    const yt = yTicks(maxV, 4);
-    const stepX = iw / Math.max(1, months.length - 1);
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.strokeStyle = "#e5e7eb";
-    ctx.fillStyle = "#64748b";
-    ctx.font = "12px system-ui";
-    for (const v of yt.ticks) {
-      const y = padT + ih - (v / yt.max) * ih;
-      ctx.beginPath();
-      ctx.moveTo(padL, y);
-      ctx.lineTo(padL + iw, y);
-      ctx.stroke();
-      ctx.fillText(String(Math.round(v)), 6, y + 4);
-    }
-
-    ctx.strokeStyle = "rgba(37,99,235,1)";
-    ctx.lineWidth = 2.6;
-    ctx.beginPath();
-    for (let i = 0; i < vals.length; i++) {
-      const x = padL + i * stepX;
-      const y = padT + ih - (vals[i] / yt.max) * ih;
-      if (i === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    }
-    ctx.stroke();
-
-    const labelEvery = Math.max(1, Math.floor(months.length / 6));
-    ctx.fillStyle = "#475569";
-    ctx.font = "11px system-ui";
-    for (let i = 0; i < months.length; i += labelEvery) {
-      const x = padL + i * stepX;
-      ctx.fillText(months[i], x - 18, padT + ih + 18);
-    }
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui";
-    ctx.fillText("Volym per månad", padL, 14);
-  }
-
-  function drawHeatmap(canvasSel, eventsFiltered) {
-    const canvas = $(canvasSel);
-    if (!canvas) return;
-
-    if (!eventsFiltered.length) {
-      drawEmpty(canvas, "Heatmap", "Inga händelser i filtret.");
-      return;
-    }
-
-    const agg = buildAgg(eventsFiltered);
-    const months = agg.months.slice(-24);
-    const cats = Object.keys(CATS);
-
-    const matrix = cats.map(c => months.map(m => (agg.byCatMonth.get(c)?.get(m) || 0)));
-    const maxV = Math.max(1, ...matrix.flat());
-
-    const { ctx, w, h } = setupCanvas(canvas);
-    const padL = 160, padR = 12, padT = 18, padB = 26;
-    const iw = w - padL - padR;
-    const ih = h - padT - padB;
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui";
-    ctx.fillText("Heatmap (kategori × månad)", padL, 14);
-
-    const cellW = iw / Math.max(1, months.length);
-    const cellH = ih / Math.max(1, cats.length);
-
-    ctx.fillStyle = "#475569";
-    ctx.font = "10.5px system-ui";
-    const labelEvery = Math.max(1, Math.floor(months.length / 8));
-    for (let i = 0; i < months.length; i += labelEvery) {
-      ctx.fillText(months[i], padL + i * cellW, padT + ih + 16);
-    }
-
-    ctx.font = "12px system-ui";
-    for (let r = 0; r < cats.length; r++) {
-      const cat = cats[r];
-      const y = padT + r * cellH;
-
-      ctx.fillStyle = "#0f172a";
-      ctx.fillText(`${CATS[cat].emoji} ${cat}`, 10, y + cellH * 0.7);
-
-      for (let c = 0; c < months.length; c++) {
-        const v = matrix[r][c];
-        const a = v / maxV;
-        ctx.fillStyle = `rgba(37,99,235,${0.08 + a * 0.42})`;
-        ctx.fillRect(padL + c * cellW, y, cellW - 1, cellH - 1);
-      }
-    }
-  }
-
-  function drawGeoTop(canvasSel, eventsFiltered, mode) {
-    const canvas = $(canvasSel);
-    if (!canvas) return;
-
-    if (!eventsFiltered.length) {
-      drawEmpty(canvas, "Topplista", "Inga händelser i filtret.");
-      return;
-    }
-
-    const keyFn = mode === "place" ? (e => e.place) : (e => e.country);
-    const m = new Map();
-    for (const e of eventsFiltered) {
-      const k = (keyFn(e) || "").trim();
-      if (!k) continue;
-      m.set(k, (m.get(k) || 0) + 1);
-    }
-
-    const items = Array.from(m.entries()).sort((a, b) => b[1] - a[1]).slice(0, 12);
-    const maxV = Math.max(1, ...items.map(x => x[1]));
-
-    const { ctx, w, h } = setupCanvas(canvas);
-    const padL = 180, padR = 12, padT = 18, padB = 16;
-    const iw = w - padL - padR;
-    const ih = h - padT - padB;
-    const rowH = ih / Math.max(1, items.length);
-
-    ctx.fillStyle = "#fff";
-    ctx.fillRect(0, 0, w, h);
-
-    ctx.fillStyle = "#0f172a";
-    ctx.font = "600 13px system-ui";
-    ctx.fillText(`Topplista (${mode === "place" ? "plats" : "land"})`, padL, 14);
-
-    ctx.font = "12px system-ui";
-    for (let i = 0; i < items.length; i++) {
-      const [name, v] = items[i];
-      const y0 = padT + i * rowH + 6;
-      const yText = padT + i * rowH + rowH * 0.68;
-
-      ctx.fillStyle = "#0f172a";
-      ctx.fillText(name, 10, yText);
-
-      const bw = (v / maxV) * iw;
-      ctx.fillStyle = "rgba(37,99,235,.18)";
-      ctx.fillRect(padL, y0, bw, Math.max(10, rowH - 10));
-
-      ctx.fillStyle = "#475569";
-      ctx.fillText(String(v), padL + bw + 8, yText);
-    }
-  }
-
-  // =========================
-  // Expandera-knappar
-  // =========================
-  function wireExpanders() {
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("[data-expand]");
-      if (!btn) return;
-
-      const sel = btn.getAttribute("data-expand");
-      const card = sel ? document.querySelector(sel) : null;
-      if (!card) return;
-
-      const open = card.classList.toggle("expanded");
-      btn.textContent = open ? "Stäng" : "Expandera";
-
-      setTimeout(() => window.dispatchEvent(new Event("resize")), 80);
-    }, true);
-  }
-
-  // =========================
-  // OIAT (score + RAG + helskärm)
-  // =========================
-  function wireOIAT() {
+  function setupOiat() {
     const sO = $("#sO"), sI = $("#sI"), sA = $("#sA"), sT = $("#sT");
+    if (!sO || !sI || !sA || !sT) return;
+
     const vO = $("#vO"), vI = $("#vI"), vA = $("#vA"), vT = $("#vT");
-    const outScoreRight = $("#oiatScore");
-    const outRagRight = $("#oiatRag");
-    const outScoreLeft = $("#oiatScoreInline");
-    const outRagLeft = $("#oiatRagInline");
+    const pO = $("#pO"), pI = $("#pI"), pA = $("#pA"), pT = $("#pT");
+    const outScore = $("#oiatScoreInline");
+    const outRag = $("#oiatRagInline");
 
-    function ragFromScore(score) {
-      if (score < 2.5) return { key: "RÖD", text: "RÖD – otillräckligt" };
-      if (score < 3.5) return { key: "GUL", text: "GUL – komplettera" };
-      return { key: "GRÖN", text: "GRÖN – robust" };
-    }
+    function render() {
+      const O = safeNum(sO.value, 0);
+      const I = safeNum(sI.value, 0);
+      const A = safeNum(sA.value, 0);
+      const T = safeNum(sT.value, 0);
 
-    function setBadge(el, rag) {
-      if (!el) return;
-      el.textContent = rag.text;
-      el.style.padding = "6px 10px";
-      el.style.borderRadius = "999px";
-      el.style.border = "1px solid var(--line)";
-      el.style.background = "#f8fafc";
-      if (rag.key === "RÖD") el.style.background = "rgba(239,68,68,.12)";
-      if (rag.key === "GUL") el.style.background = "rgba(245,158,11,.14)";
-      if (rag.key === "GRÖN") el.style.background = "rgba(34,197,94,.14)";
-    }
-
-    function update() {
-      if (!sO || !sI || !sA || !sT) return;
-
-      const O = Number(sO.value), I = Number(sI.value), A = Number(sA.value), T = Number(sT.value);
       if (vO) vO.textContent = O;
       if (vI) vI.textContent = I;
       if (vA) vA.textContent = A;
       if (vT) vT.textContent = T;
 
-      const score = (O + I + A + T) / 4;
-      const rag = ragFromScore(score);
+      if (pO) pO.textContent = O;
+      if (pI) pI.textContent = I;
+      if (pA) pA.textContent = A;
+      if (pT) pT.textContent = T;
 
-      if (outScoreRight) outScoreRight.textContent = score.toFixed(2);
-      if (outScoreLeft) outScoreLeft.textContent = score.toFixed(2);
-
-      setBadge(outRagRight, rag);
-      if (outRagLeft) outRagLeft.textContent = rag.text;
+      const { score, rag } = calcOiat(O, I, A, T);
+      if (outScore) outScore.textContent = score.toFixed(2);
+      if (outRag) outRag.textContent = rag;
     }
 
-    ["input", "change"].forEach(evt => {
-      sO?.addEventListener(evt, update);
-      sI?.addEventListener(evt, update);
-      sA?.addEventListener(evt, update);
-      sT?.addEventListener(evt, update);
+    ["input", "change"].forEach(ev => {
+      sO.addEventListener(ev, render);
+      sI.addEventListener(ev, render);
+      sA.addEventListener(ev, render);
+      sT.addEventListener(ev, render);
     });
 
-    update();
+    render();
+  }
 
-    // Lightbox
-    const fullBtn = $("#oiatFullBtn");
+  // ===== Expand sections =====
+  function setupExpandButtons() {
+    $$("[data-expand]").forEach(btn => {
+      const sel = btn.getAttribute("data-expand");
+      if (!sel) return;
+
+      btn.addEventListener("click", () => {
+        const target = document.querySelector(sel);
+        if (!target) return;
+
+        target.classList.toggle("expanded");
+
+        // knapptext växlar
+        const isOn = target.classList.contains("expanded");
+        btn.textContent = isOn ? "Återställ" : "Expandera";
+
+        // vid expand: scrolla upp till sektionens topp för snygg UX
+        if (isOn) {
+          const top = target.getBoundingClientRect().top + window.scrollY - 88;
+          window.scrollTo({ top, behavior: "smooth" });
+        }
+      });
+    });
+  }
+
+  // ===== Fullscreen for frames =====
+  async function requestFullscreen(el) {
+    if (!el) return;
+
+    // Safari iOS m.m. kan ha webkitRequestFullscreen
+    const fn =
+      el.requestFullscreen ||
+      el.webkitRequestFullscreen ||
+      el.msRequestFullscreen;
+
+    if (fn) {
+      try { await fn.call(el); } catch (_) {}
+    }
+  }
+
+  function setupFullscreenButtons() {
+    $$("[data-fullscreen]").forEach(btn => {
+      const sel = btn.getAttribute("data-fullscreen");
+      if (!sel) return;
+
+      btn.addEventListener("click", () => {
+        const target = document.querySelector(sel);
+        if (!target) return;
+        requestFullscreen(target);
+      });
+    });
+  }
+
+  // ===== OIAT lightbox =====
+  function setupOiatLightbox() {
+    const openBtn = $("#oiatFullBtn");
     const lb = $("#oiatLightbox");
     const closeBtn = $("#oiatCloseBtn");
 
-    function openLB() {
-      if (!lb) return;
+    if (!openBtn || !lb || !closeBtn) return;
+
+    const open = () => {
       lb.classList.add("open");
       lb.setAttribute("aria-hidden", "false");
       document.body.style.overflow = "hidden";
-    }
-    function closeLB() {
-      if (!lb) return;
+    };
+
+    const close = () => {
       lb.classList.remove("open");
       lb.setAttribute("aria-hidden", "true");
       document.body.style.overflow = "";
-    }
+    };
 
-    fullBtn?.addEventListener("click", openLB);
-    closeBtn?.addEventListener("click", closeLB);
-    lb?.addEventListener("click", (e) => { if (e.target === lb) closeLB(); });
-    document.addEventListener("keydown", (e) => { if (e.key === "Escape" && lb?.classList.contains("open")) closeLB(); });
-  }
+    openBtn.addEventListener("click", open);
+    closeBtn.addEventListener("click", close);
 
-  // =========================
-  // Init
-  // =========================
-  function initCharts() {
-    const raw = window.events;
-
-    const canvases = ["#sparkMulti", "#catChart", "#timeChart", "#heatChart", "#geoChart"]
-      .map(sel => $(sel))
-      .filter(Boolean);
-
-    if (!Array.isArray(raw) || raw.length === 0) {
-      canvases.forEach(c => drawEmpty(c, "Ingen data", "window.events är tom eller saknas."));
-      // chips ska fortfarande synas (med 0) så sidan inte känns “död”
-      const emptyAgg = buildAgg([]);
-      const dummy = new Set(Object.keys(CATS));
-      renderChips("#sparkLegend", emptyAgg, dummy, () => {});
-      renderChips("#catChips", emptyAgg, dummy, () => {});
-      return;
-    }
-
-    const events = normalizeEvents(raw);
-    const aggAll = buildAgg(events);
-
-    renderKPIs(events, aggAll);
-
-    // State
-    const sparkCats = new Set(Object.keys(CATS));
-    const activeCats = new Set(Object.keys(CATS));
-    let geoMode = $("#geoMode")?.value || "country";
-
-    function redrawSpark() {
-      drawSparkMulti("#sparkMulti", events, aggAll, sparkCats);
-      $$("#sparkLegend .chip").forEach(ch => {
-        const c = ch.dataset.cat;
-        ch.setAttribute("aria-pressed", sparkCats.has(c) ? "true" : "false");
-      });
-    }
-
-    function redrawMain() {
-      const filtered = filterByCats(events, activeCats);
-      drawCatBar("#catChart", filtered);
-      drawTimeLine("#timeChart", filtered);
-      drawHeatmap("#heatChart", filtered);
-      drawGeoTop("#geoChart", filtered, geoMode);
-
-      $$("#catChips .chip").forEach(ch => {
-        const c = ch.dataset.cat;
-        ch.setAttribute("aria-pressed", activeCats.has(c) ? "true" : "false");
-      });
-    }
-
-    renderChips("#sparkLegend", aggAll, sparkCats, (cat) => {
-      if (sparkCats.has(cat)) sparkCats.delete(cat);
-      else sparkCats.add(cat);
-      redrawSpark();
+    lb.addEventListener("click", (e) => {
+      if (e.target === lb) close();
     });
 
-    renderChips("#catChips", aggAll, activeCats, (cat) => {
-      if (activeCats.has(cat)) activeCats.delete(cat);
-      else activeCats.add(cat);
-      if (activeCats.size === 0) Object.keys(CATS).forEach(k => activeCats.add(k));
-      redrawMain();
-    });
-
-    $("#selAllCats")?.addEventListener("click", () => {
-      Object.keys(CATS).forEach(k => sparkCats.add(k));
-      redrawSpark();
-    });
-
-    $("#selNoCats")?.addEventListener("click", () => {
-      sparkCats.clear();
-      redrawSpark();
-    });
-
-    $("#geoMode")?.addEventListener("change", (e) => {
-      geoMode = e.target.value;
-      redrawMain();
-    });
-
-    redrawSpark();
-    redrawMain();
-
-    // resize redraw (debounced)
-    let t = null;
-    window.addEventListener("resize", () => {
-      clearTimeout(t);
-      t = setTimeout(() => {
-        redrawSpark();
-        redrawMain();
-      }, 120);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && lb.classList.contains("open")) close();
     });
   }
 
-  // Boot
-  wireExpanders();
-  document.addEventListener("DOMContentLoaded", () => {
-    wireOIAT();
-    initCharts();
-  });
+  // ===== Init =====
+  function init() {
+    buildKpis();
+    setupOiat();
+    setupExpandButtons();
+    setupFullscreenButtons();
+    setupOiatLightbox();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();
