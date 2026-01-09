@@ -10,43 +10,89 @@
 <body>
   <header class="topbar">
     <div class="brand">
-      <img src="svensk-osint-logga.png" alt="Svensk OSINT logga" class="logo" />
-      <div>
-        <h1>Svensk OSINT</h1>
-        <div class="subtitle">Hotanalys • Underrättelsecykeln • OIAT • Kända/Okända • Inbäddade vyer</div>
-      </div>
+      <!-- Stor logga (×4) och utan dubblerad text -->
+      <img src="svensk-osint-logga.png" alt="Svensk OSINT logga" class="logo logo-xl" />
     </div>
   </header>
 
   <main class="container">
 
-    <!-- MODUL: ÖVERSIKT -->
-    <section class="card" id="mod-overview" data-module>
+    <!-- MODUL: ZETTELKASTEN -->
+    <section class="card" id="mod-zettelkasten" data-module>
       <div class="card-head">
         <div>
-          <h2>Översikt</h2>
-          <p class="muted">Nyckeltal och snabb orientering.</p>
+          <h2>Zettelkasten</h2>
+          <p class="muted">Levande kunskapsnätverk för underrättelseanalys.</p>
         </div>
         <div class="actions">
-          <button class="btn" type="button" data-expand="#mod-overview">Expandera</button>
-          <button class="btn" type="button" data-fullscreen="#mod-overview">Helskärm</button>
+          <button class="btn" type="button" data-expand="#mod-zettelkasten">Expandera</button>
+          <button class="btn" type="button" data-fullscreen="#mod-zettelkasten">Helskärm</button>
         </div>
       </div>
 
       <div class="grid2">
+
         <div class="box">
-          <div class="box-title">Nyckeltal</div>
-          <div class="kpis" id="kpis"></div>
-          <div class="note" id="dataRange"></div>
+          <div class="box-title">Zettelkasten som metod</div>
+
+          <p>
+            Zettelkasten är ett system för att bygga och underhålla ett <b>levande kunskapsnätverk</b> snarare än ett arkiv.
+            Metoden förknippas med Niklas Luhmann och lämpar sig väl för underrättelsearbete där värdet ofta ligger i
+            <b>relationer, mönster och kumulativ förståelse</b>.
+          </p>
+
+          <ul class="bullets">
+            <li><b>Atomisering</b>: en idé, observation eller hypotes per zettel.</li>
+            <li><b>Permanent och spårbar kunskap</b>: återanvändbar över tid, bygger institutionellt minne.</li>
+            <li><b>Länkning framför hierarki</b>: tematiska/kausala kopplingar istället för mappar.</li>
+            <li><b>Emergent analys</b>: nya insikter uppstår när anteckningar kopplas oväntat.</li>
+          </ul>
+
+          <p class="note">
+            Styrkan är att metoden tål osäkerhet och motstridiga uppgifter: de kan ligga kvar parallellt och länkas till samma fenomen,
+            tills ny information tippar bedömningen.
+          </p>
+
+          <div class="box" style="margin-top:12px;">
+            <div class="box-title">Exempel: Obsidian (video)</div>
+
+            <!-- Spelar bara när videon är synlig, och loopar -->
+            <video
+              class="video"
+              src="obsidian.mp4"
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              data-play-when-visible
+            ></video>
+
+            <div class="note">
+              Videon startar när den syns i viewporten och pausar när du scrollar förbi. Den loopar kontinuerligt när den är synlig.
+            </div>
+          </div>
         </div>
 
         <div class="box">
-          <div class="box-title">Upplägg</div>
-          <p class="muted" style="margin:0;">
-            Den här sidan är uppbyggd som moduler för undervisning: varje modul kan expandera eller visas i helskärm.
-            I stället för att försöka rendera avancerade grafer här bäddas Dashboard och Tidslinjen in som separata vyer.
-          </p>
+          <div class="box-title">Illustrationer</div>
+
+          <div class="figure" style="margin-bottom:10px;">
+            <img src="zettel-0c.jpg" alt="Zettelkasten kortlådor" class="figure-img">
+          </div>
+
+          <div class="figure" style="margin-bottom:10px;">
+            <img src="zettelkasten-steps.png" alt="Zettelkasten process" class="figure-img">
+          </div>
+
+          <div class="figure">
+            <img src="zettelkasten-network.png" alt="Zettelkasten nätverk" class="figure-img">
+          </div>
+
+          <div class="note">
+            Lägg bilderna i samma mapp som index.html (och döp filerna exakt som i src-attributen).
+          </div>
         </div>
+
       </div>
     </section>
 
@@ -77,12 +123,17 @@
           </ul>
         </div>
 
+        <!-- HÄR: bild till höger -->
         <div class="box">
-          <div class="box-title">Undervisningsidé</div>
-          <p style="margin:0;">
-            Kör en modul i helskärm vid genomgång. Växla sedan till OIAT och Kända/Okända för att visa hur
-            källkvalitet och kunskapsläge påverkar vad som blir ett bra beslut.
-          </p>
+          <div class="box-title">Underrättelsecykeln – översikt</div>
+
+          <div class="figure">
+            <img src="analyscykel.png" alt="Underrättelsecykeln" class="figure-img" />
+          </div>
+
+          <div class="note">
+            Kör modulen i helskärm under genomgång och koppla sedan till Zettelkasten (länkning), OIAT (källkvalitet) och Kända/Okända (kunskapsläge).
+          </div>
         </div>
       </div>
     </section>
@@ -366,5 +417,34 @@
   <!-- Script: data först, sedan charts -->
   <script src="data.js"></script>
   <script src="charts.js"></script>
+
+  <!-- Video: spela bara när synlig -->
+  <script>
+    (function () {
+      const videos = Array.from(document.querySelectorAll("video[data-play-when-visible]"));
+      if (!videos.length) return;
+
+      // Om webbläsaren saknar IO, fallback: spela direkt.
+      if (!("IntersectionObserver" in window)) {
+        videos.forEach(v => { v.play().catch(() => {}); });
+        return;
+      }
+
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          const v = entry.target;
+          const isVisible = entry.isIntersecting && entry.intersectionRatio >= 0.35;
+
+          if (isVisible) {
+            v.play().catch(() => {});
+          } else {
+            v.pause();
+          }
+        });
+      }, { threshold: [0, 0.35, 0.6, 1] });
+
+      videos.forEach(v => io.observe(v));
+    })();
+  </script>
 </body>
 </html>
