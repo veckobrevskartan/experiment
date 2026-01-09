@@ -74,6 +74,8 @@
 
         <div class="box">
           <div class="box-title">Illustration</div>
+
+          <!-- (Din SVG är oförändrad) -->
           <svg class="svg" viewBox="0 0 900 420" role="img" aria-label="Underrättelsecykeln">
             <rect x="0" y="0" width="900" height="420" rx="18" fill="rgba(15,23,42,0.04)"/>
             <text x="40" y="70" font-size="22" font-weight="700" fill="#0f172a">Underrättelsecykeln</text>
@@ -237,17 +239,19 @@
         </div>
       </div>
 
+      <!-- Toolbar: behåller topplista, men tar bort singel-kategori-dropdown -->
       <div class="toolbar">
-        <label class="pill">Kategori:
-          <select id="catFilter"></select>
-        </label>
         <label class="pill">Topplista:
           <select id="geoMode">
             <option value="country">Land</option>
             <option value="place">Plats</option>
           </select>
         </label>
+        <span class="pill muted">Klicka kategorierna nedan för att filtrera.</span>
       </div>
+
+      <!-- Chips-rad (måste finnas för nya charts.js) -->
+      <div id="catChips" class="chips"></div>
 
       <div class="grid2">
         <div class="box">
@@ -271,7 +275,7 @@
         </div>
       </div>
 
-      <div class="note">Om du har få datapunkter kan vissa grafer bli glest fyllda.</div>
+      <div class="note">Om du har få datapunkter kan vissa grafer bli glest fyllda. Filtreringen påverkar alla grafer.</div>
     </section>
 
     <!-- KARTA (IFRAME) -->
@@ -299,11 +303,12 @@
 
     <footer class="footer">
       <span>© Svensk OSINT</span>
-      <span class="muted">VERSION: 2026-01-08 v2</span>
+      <span class="muted">VERSION: 2026-01-09</span>
     </footer>
 
   </main>
 
+  <!-- Viktigt: data.js måste definiera window.events -->
   <script src="data.js"></script>
   <script src="charts.js"></script>
 </body>
