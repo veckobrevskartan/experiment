@@ -4,6 +4,9 @@
   const $  = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+  // ===== Dataset =====
+  const events = Array.isArray(window.events) ? window.events : [];
+
   // ===== Helpers =====
   const pad2 = (n) => String(n).padStart(2, "0");
 
@@ -24,15 +27,12 @@
     return Array.from(new Set(arr));
   }
 
-  function safeNum(n, fallback = 0) {
+  function safeInt(n, fallback = 0) {
     const x = Number(n);
-    return Number.isFinite(x) ? x : fallback;
+    return Number.isFinite(x) ? Math.round(x) : fallback;
   }
 
-  // ===== Dataset =====
-  const events = Array.isArray(window.events) ? window.events : [];
-
-  // ===== KPI + Data range =====
+  // ===== KPI =====
   function buildKpis() {
     const elKpis = $("#kpis");
     const elRange = $("#dataRange");
@@ -75,19 +75,15 @@
 
   // ===== OIAT =====
   function ragFromScore(score) {
-    // score 0..5
-    if (score >= 4.0) return "GRÖN – robust";
-    if (score >= 2.5) return "GUL – rimlig";
-    return "RÖD – bristfällig";
+    if (score >= 3.5) return { key: "green", text: "GRÖN – robust" };
+    if (score >= 2.5) return { key: "yellow", text: "GUL – rimlig" };
+    return { key: "red", text: "RÖD – bristfällig" };
   }
 
   function calcOiat(o, i, a, t) {
-    // Enkel medelvärdesmodell (0..5)
+    // Enkel modell: medelvärde 0..5
     const score = (o + i + a + t) / 4;
-    return {
-      score,
-      rag: ragFromScore(score)
-    };
+    return { score, rag: ragFromScore(score) };
   }
 
   function setupOiat() {
@@ -95,29 +91,26 @@
     if (!sO || !sI || !sA || !sT) return;
 
     const vO = $("#vO"), vI = $("#vI"), vA = $("#vA"), vT = $("#vT");
-    const pO = $("#pO"), pI = $("#pI"), pA = $("#pA"), pT = $("#pT");
-    const outScore = $("#oiatScoreInline");
-    const outRag = $("#oiatRagInline");
+    const outScore = $("#oiatScore");
+    const ragPill = $("#oiatRagPill");
+    const ragText = $("#oiatRagText");
 
     function render() {
-      const O = safeNum(sO.value, 0);
-      const I = safeNum(sI.value, 0);
-      const A = safeNum(sA.value, 0);
-      const T = safeNum(sT.value, 0);
+      const O = safeInt(sO.value, 0);
+      const I = safeInt(sI.value, 0);
+      const A = safeInt(sA.value, 0);
+      const T = safeInt(sT.value, 0);
 
       if (vO) vO.textContent = O;
       if (vI) vI.textContent = I;
       if (vA) vA.textContent = A;
       if (vT) vT.textContent = T;
 
-      if (pO) pO.textContent = O;
-      if (pI) pI.textContent = I;
-      if (pA) pA.textContent = A;
-      if (pT) pT.textContent = T;
-
       const { score, rag } = calcOiat(O, I, A, T);
+
       if (outScore) outScore.textContent = score.toFixed(2);
-      if (outRag) outRag.textContent = rag;
+      if (ragText) ragText.textContent = rag.text;
+      if (ragPill) ragPill.setAttribute("data-rag", rag.key);
     }
 
     ["input", "change"].forEach(ev => {
@@ -140,26 +133,21 @@
         const target = document.querySelector(sel);
         if (!target) return;
 
-        target.classList.toggle("expanded");
-
-        // knapptext växlar
-        const isOn = target.classList.contains("expanded");
+        const isOn = target.classList.toggle("expanded");
         btn.textContent = isOn ? "Återställ" : "Expandera";
 
-        // vid expand: scrolla upp till sektionens topp för snygg UX
         if (isOn) {
-          const top = target.getBoundingClientRect().top + window.scrollY - 88;
+          const top = target.getBoundingClientRect().top + window.scrollY - 90;
           window.scrollTo({ top, behavior: "smooth" });
         }
       });
     });
   }
 
-  // ===== Fullscreen for frames =====
+  // ===== Fullscreen =====
   async function requestFullscreen(el) {
     if (!el) return;
 
-    // Safari iOS m.m. kan ha webkitRequestFullscreen
     const fn =
       el.requestFullscreen ||
       el.webkitRequestFullscreen ||
@@ -183,45 +171,12 @@
     });
   }
 
-  // ===== OIAT lightbox =====
-  function setupOiatLightbox() {
-    const openBtn = $("#oiatFullBtn");
-    const lb = $("#oiatLightbox");
-    const closeBtn = $("#oiatCloseBtn");
-
-    if (!openBtn || !lb || !closeBtn) return;
-
-    const open = () => {
-      lb.classList.add("open");
-      lb.setAttribute("aria-hidden", "false");
-      document.body.style.overflow = "hidden";
-    };
-
-    const close = () => {
-      lb.classList.remove("open");
-      lb.setAttribute("aria-hidden", "true");
-      document.body.style.overflow = "";
-    };
-
-    openBtn.addEventListener("click", open);
-    closeBtn.addEventListener("click", close);
-
-    lb.addEventListener("click", (e) => {
-      if (e.target === lb) close();
-    });
-
-    document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && lb.classList.contains("open")) close();
-    });
-  }
-
   // ===== Init =====
   function init() {
     buildKpis();
     setupOiat();
     setupExpandButtons();
     setupFullscreenButtons();
-    setupOiatLightbox();
   }
 
   if (document.readyState === "loading") {
