@@ -32,12 +32,7 @@ body{
   padding:14px 18px;
 }
 
-.logo{
-  height:46px;
-  width:auto;
-  display:block;
-}
-
+.logo{ height:46px; width:auto; display:block; }
 h1{ margin:0; font-size:20px; }
 .subtitle{ margin-top:2px; color:var(--muted); font-size:12.5px; }
 
@@ -68,11 +63,7 @@ h2{ margin:0; font-size:16px; }
 .muted{ color:var(--muted); }
 .note{ color:var(--muted); font-size:12.5px; margin-top:10px; }
 
-.actions{
-  display:flex;
-  gap:8px;
-  flex-wrap:wrap;
-}
+.actions{ display:flex; gap:8px; flex-wrap:wrap; }
 
 .btn{
   appearance:none;
@@ -87,8 +78,6 @@ h2{ margin:0; font-size:16px; }
   display:inline-flex;
   align-items:center;
   gap:8px;
-  position:relative;
-  z-index:2;
 }
 .btn:hover{ background:#eef2f7; }
 
@@ -114,11 +103,7 @@ h2{ margin:0; font-size:16px; }
   margin-bottom:8px;
 }
 
-.list{
-  margin:0;
-  padding-left:18px;
-  color:var(--muted);
-}
+.list{ margin:0; padding-left:18px; color:var(--muted); }
 .list li{ margin:6px 0; }
 
 .kpis{
@@ -218,14 +203,13 @@ select{
   border-top:1px solid var(--line);
 }
 
-/* ===== Kategori-chips (emoji + label + count) ===== */
+/* ===== Chips ===== */
 .chips{
   display:flex;
   flex-wrap:wrap;
   gap:8px;
   margin: 8px 0 12px;
 }
-
 .chip{
   border:1px solid var(--line);
   background:#fff;
@@ -238,22 +222,17 @@ select{
   cursor:pointer;
   user-select:none;
 }
-
-.chip:hover{
-  background:#f8fafc;
-}
-
+.chip:hover{ background:#f8fafc; }
 .chip[aria-pressed="true"]{
   background:#f1f5ff;
   border-color:#c7d2fe;
 }
-
 .chip .count{
   font-size:12px;
   color:var(--muted);
 }
 
-/* ===== Expandera-läge (garanterad “helskärm”) ===== */
+/* ===== Expandera-läge ===== */
 .card.expanded{
   position: fixed;
   inset: 0;
@@ -264,19 +243,12 @@ select{
   padding: 18px;
   background: #f5f7f7;
 }
-.card.expanded .box{
-  background:#fff;
-}
-.card.expanded .canvas{
-  min-height: 520px;
-}
-.card.expanded .frame iframe{
-  height: 90vh;
-}
-/* OIAT-bild: klicka/knapp för helskärm */
-.oiat-figure{
-  position: relative;
-}
+.card.expanded .box{ background:#fff; }
+.card.expanded .canvas{ min-height: 520px; }
+.card.expanded .frame iframe{ height: 90vh; }
+
+/* ===== OIAT helskärm ===== */
+.oiat-figure{ position: relative; }
 .oiat-figure .btn-full{
   position:absolute;
   top:10px;
@@ -284,7 +256,7 @@ select{
   z-index:3;
 }
 
-/* Enkel “lightbox” för helskärm */
+/* ===== Lightbox ===== */
 .lightbox{
   position: fixed;
   inset: 0;
@@ -323,4 +295,3 @@ select{
   height:auto;
   display:block;
 }
-
